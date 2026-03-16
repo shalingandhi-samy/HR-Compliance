@@ -128,15 +128,13 @@ async def checkins_manager(request: Request, manager_name: str):
 @app.get("/points", response_class=HTMLResponse)
 async def points(request: Request):
     import json
-    from dataclasses import asdict
     records = load_points()
     summary = get_points_summary(records)
     records_json = json.dumps([
         {"associate": r.associate, "win": r.win, "manager": r.manager,
-         "shift": r.shift, "occurrences": r.occurrences, "bucket": r.bucket}
+         "shift": r.shift, "occurrences": r.occurrences}
         for r in records
     ])
-    bucket_meta_json = json.dumps(summary["bucket_meta"])
     chart_managers = json.dumps(summary["sorted_managers"])
     chart_occs = json.dumps([
         summary["manager_stats"][m]["max_occ"] for m in summary["sorted_managers"]
@@ -145,7 +143,6 @@ async def points(request: Request):
         "request": request,
         "summary": summary,
         "records_json": records_json,
-        "bucket_meta_json": bucket_meta_json,
         "chart_managers": chart_managers,
         "chart_occs": chart_occs,
     })
