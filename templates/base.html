@@ -34,12 +34,25 @@
   <nav class="bg-[#0053e2] shadow-md">
     <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
       <div class="flex items-center gap-3">
-        <div class="bg-[#ffc220] rounded-full w-8 h-8 flex items-center justify-center font-black text-[#041f41] text-sm">W</div>
         <span class="text-white font-bold text-lg tracking-wide">PHL5 CBL Compliance Dashboard</span>
       </div>
       <a href="/" class="text-white/80 hover:text-white text-sm transition">&#8962; Home</a>
     </div>
   </nav>
+
+  <!-- Tab Nav -->
+  <div class="bg-[#041f41] border-b border-white/10">
+    <div class="max-w-7xl mx-auto px-4 flex gap-1">
+      <a href="/" class="px-5 py-3 text-sm font-semibold text-white/70 hover:text-white hover:bg-white/10 transition rounded-t-md
+        {% if request.url.path == '/' or '/manager/' in request.url.path and '/attendance/' not in request.url.path %}bg-white/10 text-white border-b-2 border-[#ffc220]{% endif %}">
+        &#128218; CBL Compliance
+      </a>
+      <a href="/attendance" class="px-5 py-3 text-sm font-semibold text-white/70 hover:text-white hover:bg-white/10 transition rounded-t-md
+        {% if '/attendance' in request.url.path %}bg-white/10 text-white border-b-2 border-[#ffc220]{% endif %}">
+        &#128197; Attendance Exceptions
+      </a>
+    </div>
+  </div>
 
   <main class="max-w-7xl mx-auto px-4 py-8">
     {% block content %}{% endblock %}

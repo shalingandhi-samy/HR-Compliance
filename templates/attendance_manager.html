@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+{% block title %}{{ data.manager }} &mdash; Attendance Exceptions{% endblock %}
+{% block content %}
+
+<a href="/attendance" class="inline-flex items-center gap-2 text-[#0053e2] hover:underline font-medium text-sm mb-6">
+  &#8592; Back to Attendance Dashboard
+</a>
+
+<div class="mb-8">
+  <div class="inline-block bg-[#041f41] text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-widest mb-2">Manager View</div>
+  <h1 class="text-3xl font-black text-[#041f41]">{{ data.manager }}</h1>
+  <p class="text-gray-500 text-sm mt-1">
+    {{ data.total }} exception(s) across {{ data.sorted_assocs | length }} associate(s)
+  </p>
+</div>
+
+<!-- Exception Type Filter Pills -->
+{% set type_styles = {
+  'AT_ABSENT':         'border-red-400 text-red-600 hover:bg-red-50',
+  'AT_ABSENT_NO_CALL': 'border-rose-400 text-rose-700 hover:bg-rose-50',
+  'AT_EARLY_IN':       'border-blue-400 text-blue-600 hover:bg-blue-50',
+  'AT_EARLY_OUT':      'border-yellow-400 text-yellow-700 hover:bg-yellow-50',
+  'AT_INC_SHIFT':      'border-orange-400 text-orange-600 hover:bg-orange-50',
+  'AT_LATE_IN':        'border-purple-400 text-purple-600 hover:bg-purple-50',
+} %}
+<div class="flex flex-wrap gap-2 mb-6">
+  <button onclick="filterType('all')" data-type="all"
+    class="pill-btn active px-4 py-1.5 rounded-full text-sm font-semibold border-2 border-[#041f41] bg-[#041f41] text-white transition">
+    All
+  </button>
+  {% for t in data.all_types %}
+  <button onclick="filterType('{{ t }}')" data-type="{{ t }}"
+    class="pill-btn px-4 py-1.5 rounded-full text-sm font-semibold border-2 {{ type_styles.get(t, 'border-gray-400 text-gray-600 hover:bg-gray-50') }} transition">
+    {{ labels.get(t, t) }}
+  </button>
+  {% endfor %}
+</div>
+
+<!-- Associates List -->
+<div class="space-y-4" id="associates-container">
+  {% for assoc in data.sorted_assocs %}
+  {% set exceptions = data.assoc_map[assoc] %}
+  {% set exc_types = exceptions | map(attribute='exception_type') | list %}
+
+  <div class="associate-card bg-white rounded-2xl shadow border border-gray-100 overflow-hidden"
+       data-types="{{ exc_types | join(' ') }}">
+
+    <!-- Associate Header -->
+    <div class="flex items-center justify-between px-6 py-4 bg-gray-50 border-b border-gray-100 cursor-pointer"
+         onclick="this.parentElement.querySelector('.exc-body').classList.toggle('hidden')">
+      <div>
+        <div class="font-bold text-[#041f41] text-base">{{ assoc }}</div>
+        <div class="text-xs text-gray-400 mt-0.5">{{ exceptions | length }} exception(s)</div>
+      </div>
+      <div class="flex gap-2 flex-wrap justify-end">
+        {% set type_counts = {} %}
+        {% for exc in exceptions %}
+          {% if exc.exception_type not in type_counts %}
+            {% set _ = type_counts.update({exc.exception_type: 0}) %}
+          {% endif %}
+          {% set _ = type_counts.update({exc.exception_type: type_counts[exc.exception_type] + 1}) %}
+        {% endfor %}
+        {% for t, cnt in type_counts.items() %}
+          <span class="badge {{ 'status-overdue' if 'ABSENT' in t else ('status-7days' if 'EARLY_OUT' in t or 'INC' in t else ('status-30days' if 'EARLY_IN' in t else 'status-60days')) }}">
+            {{ labels.get(t, t) }}: {{ cnt }}
+          </span>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Exception Rows -->
+    <div class="exc-body hidden">
+      <table class="w-full text-sm">
+        <thead class="bg-gray-50 border-b border-gray-100">
+          <tr>
+            <th class="px-6 py-2 text-left text-gray-500 font-medium">Exception Type</th>
+            <th class="px-6 py-2 text-center text-gray-500 font-medium">Date</th>
+            <th class="px-6 py-2 text-center text-gray-500 font-medium">Duration</th>
+            <th class="px-6 py-2 text-center text-gray-500 font-medium">Occurrences</th>
+            <th class="px-6 py-2 text-left text-gray-500 font-medium">Team</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-50">
+          {% for exc in exceptions | sort(attribute='exception_date') %}
+          <tr class="hover:bg-gray-50 transition exc-row" data-type="{{ exc.exception_type }}">
+            <td class="px-6 py-2.5">
+              <span class="badge {{ 'status-overdue' if 'ABSENT' in exc.exception_type else ('status-7days' if 'EARLY_OUT' in exc.exception_type or 'INC' in exc.exception_type else ('status-30days' if 'EARLY_IN' in exc.exception_type else 'status-60days')) }}">
+                {{ labels.get(exc.exception_type, exc.exception_type) }}
+              </span>
+            </td>
+            <td class="px-6 py-2.5 text-center text-gray-500">
+              {{ exc.exception_date.strftime('%m/%d/%Y') if exc.exception_date else '&mdash;' }}
+            </td>
+            <td class="px-6 py-2.5 text-center text-gray-500">
+              {{ exc.duration.strftime('%H:%M') if exc.duration else '&mdash;' }}
+            </td>
+            <td class="px-6 py-2.5 text-center text-gray-500">{{ exc.occurrence or '&mdash;' }}</td>
+            <td class="px-6 py-2.5 text-gray-500 text-xs">{{ exc.team_desc }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<script>
+function filterType(type) {
+  document.querySelectorAll('.pill-btn').forEach(btn => {
+    btn.classList.remove('bg-[#041f41]', 'text-white');
+  });
+  const active = document.querySelector(`[data-type="${type}"]`);
+  if (active) active.classList.add('bg-[#041f41]', 'text-white');
+
+  document.querySelectorAll('.associate-card').forEach(card => {
+    if (type === 'all') {
+      card.style.display = '';
+    } else {
+      const types = card.getAttribute('data-types') || '';
+      card.style.display = types.includes(type) ? '' : 'none';
+    }
+  });
+
+  document.querySelectorAll('.associate-card').forEach(card => {
+    const body = card.querySelector('.exc-body');
+    if (!body) return;
+    if (type === 'all') {
+      body.classList.add('hidden');
+      card.querySelectorAll('.exc-row').forEach(r => r.style.display = '');
+    } else if (card.style.display !== 'none') {
+      body.classList.remove('hidden');
+      card.querySelectorAll('.exc-row').forEach(r => {
+        r.style.display = r.dataset.type === type ? '' : 'none';
+      });
+    }
+  });
+}
+</script>
+
+{% endblock %}

@@ -7,6 +7,12 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from data import get_manager_associates, get_summary, load_data, STATUS_ORDER
+from attendance_data import (
+    get_attendance_manager_detail,
+    get_attendance_summary,
+    load_attendance,
+    EXCEPTION_LABELS,
+)
 
 app = FastAPI(title="PHL5 Compliance Dashboard")
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -34,6 +40,30 @@ async def manager_detail(request: Request, manager_name: str):
         "request": request,
         "data": data,
         "status_order": STATUS_ORDER,
+        "quote": quote,
+    })
+
+
+@app.get("/attendance", response_class=HTMLResponse)
+async def attendance(request: Request):
+    records = load_attendance()
+    summary = get_attendance_summary(records)
+    return templates.TemplateResponse("attendance.html", {
+        "request": request,
+        "summary": summary,
+        "labels": EXCEPTION_LABELS,
+    })
+
+
+@app.get("/attendance/manager/{manager_name}", response_class=HTMLResponse)
+async def attendance_manager(request: Request, manager_name: str):
+    manager = unquote(manager_name)
+    records = load_attendance()
+    data = get_attendance_manager_detail(records, manager)
+    return templates.TemplateResponse("attendance_manager.html", {
+        "request": request,
+        "data": data,
+        "labels": EXCEPTION_LABELS,
         "quote": quote,
     })
 

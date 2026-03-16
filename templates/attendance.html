@@ -1,0 +1,199 @@
+{% extends "base.html" %}
+{% block title %}PHL5 Attendance Exceptions{% endblock %}
+{% block content %}
+
+<div class="mb-8">
+  <h1 class="text-3xl font-bold text-[#041f41] mb-1">PHL5 Attendance Exceptions</h1>
+  <p class="text-gray-500 text-sm">All attendance exceptions pending authorization</p>
+</div>
+
+<!-- Total Card -->
+<div class="mb-4">
+  <div class="bg-[#041f41] text-white rounded-2xl px-8 py-5 shadow-lg flex items-center gap-6">
+    <div>
+      <div class="text-white/70 text-xs font-semibold uppercase tracking-wider">Total Exceptions</div>
+      <div class="text-5xl font-black mt-1">{{ summary.total }}</div>
+      <div class="text-white/60 text-xs mt-1">Across PHL5</div>
+    </div>
+  </div>
+</div>
+
+<!-- Exception Type Cards -->
+{% set type_styles = {
+  'AT_ABSENT':         'bg-red-50 border-red-200 text-red-700',
+  'AT_ABSENT_NO_CALL': 'bg-rose-50 border-rose-300 text-rose-800',
+  'AT_EARLY_IN':       'bg-blue-50 border-blue-200 text-blue-700',
+  'AT_EARLY_OUT':      'bg-yellow-50 border-yellow-200 text-yellow-700',
+  'AT_INC_SHIFT':      'bg-orange-50 border-orange-200 text-orange-700',
+  'AT_LATE_IN':        'bg-purple-50 border-purple-200 text-purple-700',
+} %}
+<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-10">
+  {% for t in summary.all_types %}
+  {% set style = type_styles.get(t, 'bg-gray-50 border-gray-200 text-gray-700') %}
+  <div class="border-2 rounded-2xl p-4 {{ style }} flex flex-col shadow-sm">
+    <div class="text-xs font-semibold uppercase tracking-wider opacity-70">{{ labels.get(t, t) }}</div>
+    <div class="text-3xl font-black mt-1">{{ summary.type_totals[t] }}</div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- By Manager Table -->
+<section class="mb-12">
+  <div class="flex items-center justify-between mb-4">
+    <h2 class="text-xl font-bold text-[#041f41]">&#128100; Exceptions by Manager</h2>
+    <span class="text-sm text-gray-400">Click a manager to view associates</span>
+  </div>
+  <div class="overflow-x-auto rounded-2xl shadow border border-gray-100">
+    <table class="w-full text-sm">
+      <thead class="bg-[#0053e2] text-white">
+        <tr>
+          <th class="px-4 py-3 text-left font-semibold">Manager</th>
+          <th class="px-4 py-3 text-center font-semibold">Total</th>
+          {% for t in summary.all_types %}
+          <th class="px-4 py-3 text-center font-semibold">{{ labels.get(t, t) }}</th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-100">
+        {% for manager in summary.sorted_managers %}
+        {% set stats = summary.manager_stats[manager] %}
+        {% set tot = summary.manager_totals[manager] %}
+        <tr class="hover:bg-blue-50 transition cursor-pointer group"
+            onclick="window.location='/attendance/manager/{{ manager | urlencode }}'">
+          <td class="px-4 py-3 font-medium text-[#0053e2] group-hover:underline">{{ manager }}</td>
+          <td class="px-4 py-3 text-center font-bold text-gray-700">{{ tot }}</td>
+          {% for t in summary.all_types %}
+          {% set cnt = stats.get(t, 0) %}
+          <td class="px-4 py-3 text-center">
+            {% if cnt > 0 %}
+              <span class="badge {{ 'status-overdue' if 'ABSENT' in t else ('status-7days' if 'EARLY_OUT' in t or 'INC' in t else ('status-30days' if 'EARLY_IN' in t else 'status-60days')) }}">{{ cnt }}</span>
+            {% else %}
+              <span class="text-gray-300">&mdash;</span>
+            {% endif %}
+          </td>
+          {% endfor %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- By Shift Table + Chart -->
+<section class="mb-12">
+  <h2 class="text-xl font-bold text-[#041f41] mb-4">&#128197; Exceptions by Shift</h2>
+  <div class="grid md:grid-cols-2 gap-6">
+    <!-- Table -->
+    <div class="overflow-x-auto rounded-2xl shadow border border-gray-100">
+      <table class="w-full text-sm">
+        <thead class="bg-[#041f41] text-white">
+          <tr>
+            <th class="px-4 py-3 text-left font-semibold">Shift</th>
+            <th class="px-4 py-3 text-center font-semibold">Total</th>
+            {% for t in summary.all_types %}
+            <th class="px-4 py-3 text-center font-semibold">{{ labels.get(t, t) }}</th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+          {% for shift in summary.sorted_shifts %}
+          {% set stats = summary.shift_stats[shift] %}
+          {% set tot_s = stats.values() | sum %}
+          <tr class="hover:bg-gray-50 transition">
+            <td class="px-4 py-3 font-medium text-gray-700">{{ shift }}</td>
+            <td class="px-4 py-3 text-center font-bold text-gray-700">{{ tot_s }}</td>
+            {% for t in summary.all_types %}
+            {% set cnt = stats.get(t, 0) %}
+            <td class="px-4 py-3 text-center">
+              {% if cnt > 0 %}
+                <span class="badge {{ 'status-overdue' if 'ABSENT' in t else ('status-7days' if 'EARLY_OUT' in t or 'INC' in t else ('status-30days' if 'EARLY_IN' in t else 'status-60days')) }}">{{ cnt }}</span>
+              {% else %}
+                <span class="text-gray-300">&mdash;</span>
+              {% endif %}
+            </td>
+            {% endfor %}
+          </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot class="bg-[#041f41] text-white font-bold">
+          <tr>
+            <td class="px-4 py-3">Total</td>
+            <td class="px-4 py-3 text-center">{{ summary.total }}</td>
+            {% for t in summary.all_types %}
+            <td class="px-4 py-3 text-center">{{ summary.type_totals[t] }}</td>
+            {% endfor %}
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <!-- Chart -->
+    <div class="bg-white rounded-2xl shadow border border-gray-100 p-4">
+      <h3 class="text-sm font-semibold text-gray-500 mb-3">Exception Types by Shift</h3>
+      <div style="height:320px;">
+        <canvas id="shiftChart"></canvas>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Manager Chart -->
+<section class="mb-12">
+  <h2 class="text-xl font-bold text-[#041f41] mb-4">&#128202; Manager Overview Chart</h2>
+  <div class="bg-white rounded-2xl shadow border border-gray-100 p-4">
+    <div style="height:360px;">
+      <canvas id="managerChart"></canvas>
+    </div>
+  </div>
+</section>
+
+<script>
+const shiftLabels = {{ summary.sorted_shifts | tojson }};
+const shiftStats  = {{ summary.shift_stats   | tojson }};
+const allTypes    = {{ summary.all_types      | tojson }};
+const typeLabels  = {{ labels                 | tojson }};
+const typeColors  = ['#ea1100','#ff6b6b','#0053e2','#ffc220','#f59e0b','#7c3aed'];
+
+const shiftDatasets = allTypes.map((t, i) => ({
+  label: typeLabels[t] || t,
+  data: shiftLabels.map(sh => shiftStats[sh] ? shiftStats[sh][t] || 0 : 0),
+  backgroundColor: typeColors[i % typeColors.length],
+  borderRadius: 4,
+}));
+
+new Chart(document.getElementById('shiftChart'), {
+  type: 'bar',
+  data: { labels: shiftLabels, datasets: shiftDatasets },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { position: 'top' } },
+    scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } }
+  }
+});
+
+const managerStats = {{ summary.manager_stats   | tojson }};
+const allMgrs      = {{ summary.sorted_managers | tojson }};
+const top10        = allMgrs.slice(0, 10);
+
+const mgrDatasets = allTypes.map((t, i) => ({
+  label: typeLabels[t] || t,
+  data: top10.map(m => managerStats[m] ? managerStats[m][t] || 0 : 0),
+  backgroundColor: typeColors[i % typeColors.length],
+  borderRadius: 4,
+}));
+
+new Chart(document.getElementById('managerChart'), {
+  type: 'bar',
+  data: { labels: top10, datasets: mgrDatasets },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    indexAxis: 'y',
+    plugins: { legend: { position: 'top' } },
+    scales: { x: { stacked: true, beginAtZero: true }, y: { stacked: true } }
+  }
+});
+</script>
+
+{% endblock %}
