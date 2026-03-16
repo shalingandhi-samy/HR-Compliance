@@ -9,7 +9,7 @@
 </div>
 
 <!-- Big Cards -->
-<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-8 max-w-7xl mx-auto">
+<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8 max-w-7xl mx-auto">
 
   <!-- CBL Compliance -->
   <a href="/cbls"
@@ -89,6 +89,26 @@
     </div>
     <div class="px-10 pb-8 flex justify-center">
       <span class="text-[#7f1d1d] font-bold text-sm group-hover:underline">View Dashboard &rarr;</span>
+    </div>
+  </a>
+
+  <!-- Pending Time Off Requests -->
+  <a href="/pto"
+     class="group relative bg-white border-2 border-gray-100 rounded-3xl shadow-lg hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 overflow-hidden cursor-pointer flex flex-col">
+    <div class="h-2 bg-[#2a8703] w-full"></div>
+    <div class="p-10 flex flex-col items-center text-center flex-1">
+      <div class="w-24 h-24 rounded-full bg-green-50 border-4 border-[#2a8703] flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
+        <span class="text-4xl">&#128197;</span>
+      </div>
+      <h2 class="text-2xl font-black text-[#041f41] mb-2">Time Off Requests</h2>
+      <p class="text-gray-400 text-sm mb-8">Pending time off requests awaiting manager approval by shift and position</p>
+      <div class="mt-auto w-full bg-green-50 rounded-2xl py-5 px-4">
+        <div class="text-xs font-semibold text-[#2a8703] uppercase tracking-wider mb-1">Total Pending Requests</div>
+        <div class="text-5xl font-black text-[#2a8703]">{{ pto_total }}</div>
+      </div>
+    </div>
+    <div class="px-10 pb-8 flex justify-center">
+      <span class="text-[#2a8703] font-bold text-sm group-hover:underline">View Dashboard &rarr;</span>
     </div>
   </a>
 

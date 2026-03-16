@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}{{ data.manager }} &mdash; Time Off Requests{% endblock %}
+{% block content %}
+
+<a href="/pto" class="inline-flex items-center gap-2 text-[#0053e2] hover:underline font-medium text-sm mb-6">
+  &#8592; Back to Time Off Requests Dashboard
+</a>
+
+<div class="mb-8">
+  <div class="inline-block bg-[#2a8703] text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-widest mb-2">Manager</div>
+  <h1 class="text-3xl font-black text-[#041f41]">{{ data.manager }}</h1>
+  <p class="text-gray-500 text-sm mt-1">{{ data.total }} pending time off request(s)</p>
+</div>
+
+<div class="overflow-x-auto rounded-2xl shadow border border-gray-100">
+  <table class="w-full text-sm">
+    <thead class="bg-[#2a8703] text-white">
+      <tr>
+        <th class="px-6 py-3 text-left font-semibold">Date Submitted</th>
+        <th class="px-6 py-3 text-left font-semibold">Date Requested</th>
+        <th class="px-6 py-3 text-left font-semibold">Associate</th>
+        <th class="px-6 py-3 text-left font-semibold">Position</th>
+        <th class="px-6 py-3 text-left font-semibold">Shift</th>
+        <th class="px-6 py-3 text-center font-semibold">Time Off</th>
+        <th class="px-6 py-3 text-center font-semibold">Status</th>
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-gray-100">
+      {% for rec in data.records %}
+      <tr class="hover:bg-gray-50 transition">
+        <td class="px-6 py-4 text-gray-500 text-xs">{{ rec.date_submitted }}</td>
+        <td class="px-6 py-4 font-medium text-gray-800">{{ rec.date_requested }}</td>
+        <td class="px-6 py-4 font-medium text-gray-800">{{ rec.associate }}</td>
+        <td class="px-6 py-4 text-gray-600 text-xs">{{ rec.position }}</td>
+        <td class="px-6 py-4 text-gray-600 text-xs">{{ rec.shift }}</td>
+        <td class="px-6 py-4 text-center">
+          <span class="inline-block px-2 py-0.5 rounded-full text-xs font-bold bg-green-50 text-[#2a8703] border border-[#2a8703]">{{ rec.time_requested }}</span>
+        </td>
+        <td class="px-6 py-4 text-center">
+          <span class="inline-block px-3 py-1 rounded-full text-xs font-bold text-white bg-[#f59e0b]">Pending</span>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% endblock %}
