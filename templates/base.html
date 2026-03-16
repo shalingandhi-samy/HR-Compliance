@@ -43,8 +43,8 @@
   <!-- Tab Nav -->
   <div class="bg-[#041f41] border-b border-white/10">
     <div class="max-w-7xl mx-auto px-4 flex gap-1">
-      <a href="/" class="px-5 py-3 text-sm font-semibold text-white/70 hover:text-white hover:bg-white/10 transition rounded-t-md
-        {% if request.url.path == '/' or '/manager/' in request.url.path and '/attendance/' not in request.url.path %}bg-white/10 text-white border-b-2 border-[#ffc220]{% endif %}">
+      <a href="/cbls" class="px-5 py-3 text-sm font-semibold text-white/70 hover:text-white hover:bg-white/10 transition rounded-t-md
+        {% if request.url.path == '/cbls' or '/cbls/manager/' in request.url.path %}bg-white/10 text-white border-b-2 border-[#ffc220]{% endif %}">
         &#128218; CBL Compliance
       </a>
       <a href="/attendance" class="px-5 py-3 text-sm font-semibold text-white/70 hover:text-white hover:bg-white/10 transition rounded-t-md

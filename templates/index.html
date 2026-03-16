@@ -63,7 +63,7 @@
         {% set stats = summary.manager_stats[manager] %}
         {% set total_m = summary.manager_totals[manager] %}
         <tr class="hover:bg-blue-50 transition cursor-pointer group"
-            onclick="window.location='/manager/{{ manager | urlencode }}'">
+            onclick="window.location='/cbls/manager/{{ manager | urlencode }}'">
           <td class="px-4 py-3 font-medium text-[#0053e2] group-hover:underline">
             {{ manager }}
           </td>

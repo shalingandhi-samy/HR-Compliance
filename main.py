@@ -25,6 +25,27 @@ templates = Jinja2Templates(directory="templates")
 
 
 @app.get("/", response_class=HTMLResponse)
+async def home(request: Request):
+    # Load all 3 totals for the home page cards
+    cbl_records = load_data()
+    cbl_summary = get_summary(cbl_records)
+
+    att_records = load_attendance()
+    att_summary = get_attendance_summary(att_records)
+
+    chk_records = load_checkins()
+    chk_summary = get_checkin_summary(chk_records)
+
+    return templates.TemplateResponse("home.html", {
+        "request": request,
+        "cbl_total": cbl_summary["total"],
+        "att_total": att_summary["total"],
+        "chk_total": chk_summary["total"],
+        "chk_associates": chk_summary["total_associates"],
+    })
+
+
+@app.get("/cbls", response_class=HTMLResponse)
 async def index(request: Request):
     records = load_data()
     summary = get_summary(records)
@@ -36,7 +57,7 @@ async def index(request: Request):
     })
 
 
-@app.get("/manager/{manager_name}", response_class=HTMLResponse)
+@app.get("/cbls/manager/{manager_name}", response_class=HTMLResponse)
 async def manager_detail(request: Request, manager_name: str):
     manager = unquote(manager_name)
     records = load_data()
