@@ -66,7 +66,7 @@ def load_data(force: bool = False) -> list[CBLRecord]:
 
     records: list[CBLRecord] = []
     wb = openpyxl.load_workbook(EXCEL_PATH, data_only=True, read_only=True)
-    ws = wb.active
+    ws = wb["Ulearns"]
 
     header_found = False
     for row in ws.iter_rows(values_only=True):
