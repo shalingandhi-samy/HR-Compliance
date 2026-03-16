@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}PHL5 CBL Compliance{% endblock %}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            walmart: { blue: '#0053e2', yellow: '#ffc220', dark: '#041f41' },
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { font-family: 'Segoe UI', sans-serif; }
+    .status-overdue   { background-color: #fef2f2; color: #ea1100; border-color: #ea1100; }
+    .status-7days     { background-color: #fffbeb; color: #995213; border-color: #ffc220; }
+    .status-14days    { background-color: #fffbeb; color: #995213; border-color: #f59e0b; }
+    .status-30days    { background-color: #eff6ff; color: #0053e2; border-color: #0053e2; }
+    .status-60days    { background-color: #f0fdf4; color: #2a8703; border-color: #2a8703; }
+    .badge { display:inline-flex; align-items:center; padding:2px 10px; border-radius:9999px; font-size:0.75rem; font-weight:600; border:1px solid; }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+
+  <!-- Nav -->
+  <nav class="bg-[#0053e2] shadow-md">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="bg-[#ffc220] rounded-full w-8 h-8 flex items-center justify-center font-black text-[#041f41] text-sm">W</div>
+        <span class="text-white font-bold text-lg tracking-wide">PHL5 CBL Compliance Dashboard</span>
+      </div>
+      <a href="/" class="text-white/80 hover:text-white text-sm transition">&#8962; Home</a>
+    </div>
+  </nav>
+
+  <main class="max-w-7xl mx-auto px-4 py-8">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="text-center text-gray-400 text-xs py-6 mt-8">
+    PHL5 CBL Compliance &mdash; Internal Use Only
+  </footer>
+
+</body>
+</html>

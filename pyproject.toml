@@ -1,0 +1,16 @@
+[project]
+name = "phl5-compliance"
+version = "0.1.0"
+description = "PHL5 CBL Compliance Dashboard"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi",
+    "uvicorn[standard]",
+    "jinja2",
+    "openpyxl",
+    "python-multipart",
+]
+
+[[tool.uv.index]]
+url = "https://pypi.ci.artifacts.walmart.com/artifactory/api/pypi/external-pypi/simple"
+default = true

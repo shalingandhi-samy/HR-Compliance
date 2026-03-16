@@ -1,0 +1,210 @@
+{% extends "base.html" %}
+{% block title %}PHL5 CBL Compliance - Dashboard{% endblock %}
+{% block content %}
+
+<!-- Hero Stats -->
+<div class="mb-8">
+  <h1 class="text-3xl font-bold text-[#041f41] mb-1">PHL5 Fulfillment Center</h1>
+  <p class="text-gray-500 text-sm">CBL Compliance Overview &mdash; All statuses</p>
+</div>
+
+<!-- Summary Cards -->
+<div class="grid grid-cols-2 md:grid-cols-6 gap-4 mb-10">
+  <div class="col-span-2 md:col-span-2 bg-[#0053e2] text-white rounded-2xl p-6 shadow-lg flex flex-col justify-between">
+    <div class="text-white/70 text-sm font-medium uppercase tracking-wider">Total CBLs Pending</div>
+    <div class="text-5xl font-black mt-2">{{ total }}</div>
+    <div class="text-white/60 text-xs mt-1">Across PHL5</div>
+  </div>
+  {% set status_styles = [
+    ('Overdue',  'bg-red-50 border-red-200 text-red-700',   '#ea1100'),
+    ('7 Days',   'bg-yellow-50 border-yellow-200 text-yellow-700', '#ffc220'),
+    ('14 Days',  'bg-orange-50 border-orange-200 text-orange-700', '#f59e0b'),
+    ('30 Days',  'bg-blue-50 border-blue-200 text-blue-700',  '#0053e2'),
+    ('60 Days',  'bg-green-50 border-green-200 text-green-700', '#2a8703'),
+  ] %}
+  {% for status, style, color in status_styles %}
+  {% set count = namespace(n=0) %}
+  {% for m in summary.sorted_managers %}
+    {% set count.n = count.n + summary.manager_stats[m][status] %}
+  {% endfor %}
+  <div class="border-2 rounded-2xl p-4 {{ style }} flex flex-col shadow-sm">
+    <div class="text-xs font-semibold uppercase tracking-wider opacity-70">{{ status }}</div>
+    <div class="text-3xl font-black mt-1">{{ count.n }}</div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- By Manager Table -->
+<section class="mb-12">
+  <div class="flex items-center justify-between mb-4">
+    <h2 class="text-xl font-bold text-[#041f41]">&#128100; CBLs by Manager</h2>
+    <span class="text-sm text-gray-400">Click a manager to view associates</span>
+  </div>
+  <div class="overflow-x-auto rounded-2xl shadow border border-gray-100">
+    <table class="w-full text-sm">
+      <thead class="bg-[#0053e2] text-white">
+        <tr>
+          <th class="px-4 py-3 text-left font-semibold">Manager</th>
+          <th class="px-4 py-3 text-center font-semibold">Total</th>
+          {% for s in status_order %}
+          <th class="px-4 py-3 text-center font-semibold">{{ s }}</th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-100">
+        {% for manager in summary.sorted_managers %}
+        {% set stats = summary.manager_stats[manager] %}
+        {% set total_m = summary.manager_totals[manager] %}
+        <tr class="hover:bg-blue-50 transition cursor-pointer group"
+            onclick="window.location='/manager/{{ manager | urlencode }}'">
+          <td class="px-4 py-3 font-medium text-[#0053e2] group-hover:underline">
+            {{ manager }}
+          </td>
+          <td class="px-4 py-3 text-center font-bold text-gray-700">{{ total_m }}</td>
+          {% for s in status_order %}
+          {% set cnt = stats[s] %}
+          <td class="px-4 py-3 text-center">
+            {% if cnt > 0 %}
+              {% if s == 'Overdue' %}
+                <span class="badge status-overdue">{{ cnt }}</span>
+              {% elif s == '7 Days' %}
+                <span class="badge status-7days">{{ cnt }}</span>
+              {% elif s == '14 Days' %}
+                <span class="badge status-14days">{{ cnt }}</span>
+              {% elif s == '30 Days' %}
+                <span class="badge status-30days">{{ cnt }}</span>
+              {% else %}
+                <span class="badge status-60days">{{ cnt }}</span>
+              {% endif %}
+            {% else %}
+              <span class="text-gray-300">&mdash;</span>
+            {% endif %}
+          </td>
+          {% endfor %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- By Shift Table + Chart -->
+<section class="mb-12">
+  <h2 class="text-xl font-bold text-[#041f41] mb-4">&#128197; CBLs by Shift</h2>
+  <div class="grid md:grid-cols-2 gap-6">
+    <!-- Table -->
+    <div class="overflow-x-auto rounded-2xl shadow border border-gray-100">
+      <table class="w-full text-sm">
+        <thead class="bg-[#041f41] text-white">
+          <tr>
+            <th class="px-4 py-3 text-left font-semibold">Shift</th>
+            <th class="px-4 py-3 text-center font-semibold">Total</th>
+            {% for s in status_order %}
+            <th class="px-4 py-3 text-center font-semibold">{{ s }}</th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+          {% for shift in summary.sorted_shifts %}
+          {% set stats = summary.shift_stats[shift] %}
+          {% set total_s = stats.values() | sum %}
+          <tr class="hover:bg-gray-50 transition">
+            <td class="px-4 py-3 font-medium text-gray-700">{{ shift }}</td>
+            <td class="px-4 py-3 text-center font-bold text-gray-700">{{ total_s }}</td>
+            {% for s in status_order %}
+            {% set cnt = stats[s] %}
+            <td class="px-4 py-3 text-center">
+              {% if cnt > 0 %}
+                {% if s == 'Overdue' %}
+                  <span class="badge status-overdue">{{ cnt }}</span>
+                {% elif s == '7 Days' %}
+                  <span class="badge status-7days">{{ cnt }}</span>
+                {% elif s == '14 Days' %}
+                  <span class="badge status-14days">{{ cnt }}</span>
+                {% elif s == '30 Days' %}
+                  <span class="badge status-30days">{{ cnt }}</span>
+                {% else %}
+                  <span class="badge status-60days">{{ cnt }}</span>
+                {% endif %}
+              {% else %}
+                <span class="text-gray-300">&mdash;</span>
+              {% endif %}
+            </td>
+            {% endfor %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Chart -->
+    <div class="bg-white rounded-2xl shadow border border-gray-100 p-4">
+      <h3 class="text-sm font-semibold text-gray-500 mb-3">CBL Status Distribution by Shift</h3>
+      <div style="height:320px;">
+        <canvas id="shiftChart"></canvas>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Manager Chart -->
+<section class="mb-12">
+  <h2 class="text-xl font-bold text-[#041f41] mb-4">&#128202; Manager Overview Chart</h2>
+  <div class="bg-white rounded-2xl shadow border border-gray-100 p-4">
+    <div style="height:360px;">
+      <canvas id="managerChart"></canvas>
+    </div>
+  </div>
+</section>
+
+<script>
+// Shift chart data
+const shiftLabels = {{ summary.sorted_shifts | tojson }};
+const shiftStats = {{ summary.shift_stats | tojson }};
+const statusOrder = {{ status_order | tojson }};
+const statusColors = ['#ea1100','#ffc220','#f59e0b','#0053e2','#2a8703'];
+
+const shiftDatasets = statusOrder.map((s, i) => ({
+  label: s,
+  data: shiftLabels.map(sh => shiftStats[sh] ? shiftStats[sh][s] || 0 : 0),
+  backgroundColor: statusColors[i],
+  borderRadius: 4,
+}));
+
+new Chart(document.getElementById('shiftChart'), {
+  type: 'bar',
+  data: { labels: shiftLabels, datasets: shiftDatasets },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { position: 'top' } },
+    scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } }
+  }
+});
+
+// Manager chart (top 10)
+const managerStats = {{ summary.manager_stats | tojson }};
+const allMgrs = {{ summary.sorted_managers | tojson }};
+const top10 = allMgrs.slice(0, 10);
+
+const mgrDatasets = statusOrder.map((s, i) => ({
+  label: s,
+  data: top10.map(m => managerStats[m] ? managerStats[m][s] || 0 : 0),
+  backgroundColor: statusColors[i],
+  borderRadius: 4,
+}));
+
+new Chart(document.getElementById('managerChart'), {
+  type: 'bar',
+  data: { labels: top10, datasets: mgrDatasets },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    indexAxis: 'y',
+    plugins: { legend: { position: 'top' } },
+    scales: { x: { stacked: true, beginAtZero: true }, y: { stacked: true } }
+  }
+});
+</script>
+
+{% endblock %}

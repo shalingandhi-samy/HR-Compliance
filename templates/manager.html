@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+{% block title %}{{ data.manager }} &mdash; PHL5 CBL Compliance{% endblock %}
+{% block content %}
+
+<!-- Back Button -->
+<a href="/" class="inline-flex items-center gap-2 text-[#0053e2] hover:underline font-medium text-sm mb-6">
+  &#8592; Back to Dashboard
+</a>
+
+<!-- Header -->
+<div class="mb-8">
+  <div class="inline-block bg-[#0053e2] text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-widest mb-2">Manager View</div>
+  <h1 class="text-3xl font-black text-[#041f41]">{{ data.manager }}</h1>
+  <p class="text-gray-500 text-sm mt-1">{{ data.total }} pending CBL(s) across {{ data.sorted_assocs | length }} associate(s)</p>
+</div>
+
+<!-- Status Filter Pills -->
+<div class="flex flex-wrap gap-2 mb-6" id="filter-pills">
+  <button onclick="filterStatus('all')" class="pill-btn active px-4 py-1.5 rounded-full text-sm font-semibold border-2 border-[#0053e2] bg-[#0053e2] text-white transition" data-status="all">All</button>
+  <button onclick="filterStatus('Overdue')" class="pill-btn px-4 py-1.5 rounded-full text-sm font-semibold border-2 border-red-400 text-red-600 hover:bg-red-50 transition" data-status="Overdue">&#128308; Overdue</button>
+  <button onclick="filterStatus('7 Days')" class="pill-btn px-4 py-1.5 rounded-full text-sm font-semibold border-2 border-yellow-400 text-yellow-700 hover:bg-yellow-50 transition" data-status="7 Days">&#128992; Due in 7 Days</button>
+  <button onclick="filterStatus('14 Days')" class="pill-btn px-4 py-1.5 rounded-full text-sm font-semibold border-2 border-orange-400 text-orange-600 hover:bg-orange-50 transition" data-status="14 Days">&#128993; Due in 14 Days</button>
+  <button onclick="filterStatus('30 Days')" class="pill-btn px-4 py-1.5 rounded-full text-sm font-semibold border-2 border-blue-400 text-blue-600 hover:bg-blue-50 transition" data-status="30 Days">&#128309; Due in 30 Days</button>
+  <button onclick="filterStatus('60 Days')" class="pill-btn px-4 py-1.5 rounded-full text-sm font-semibold border-2 border-green-400 text-green-600 hover:bg-green-50 transition" data-status="60 Days">&#128994; Due in 60 Days</button>
+</div>
+
+<!-- Associates List -->
+<div class="space-y-4" id="associates-container">
+  {% for assoc in data.sorted_assocs %}
+  {% set cbls = data.assoc_map[assoc] %}
+  {% set assoc_total = namespace(n=0) %}
+  {% for s in status_order %}{% set assoc_total.n = assoc_total.n + cbls[s]|length %}{% endfor %}
+
+  <div class="associate-card bg-white rounded-2xl shadow border border-gray-100 overflow-hidden"
+       data-statuses="{% for s in status_order %}{% if cbls[s]|length > 0 %}{{ s }} {% endif %}{% endfor %}">
+
+    <!-- Associate Header -->
+    <div class="flex items-center justify-between px-6 py-4 bg-gray-50 border-b border-gray-100 cursor-pointer"
+         onclick="this.parentElement.querySelector('.cbl-body').classList.toggle('hidden')">
+      <div>
+        <div class="font-bold text-[#041f41] text-base">{{ assoc }}</div>
+        <div class="text-xs text-gray-400 mt-0.5">{{ assoc_total.n }} CBL(s) pending</div>
+      </div>
+      <div class="flex gap-2 flex-wrap justify-end">
+        {% for s in status_order %}
+          {% if cbls[s]|length > 0 %}
+            {% if s == 'Overdue' %}
+              <span class="badge status-overdue">{{ cbls[s]|length }} Overdue</span>
+            {% elif s == '7 Days' %}
+              <span class="badge status-7days">{{ cbls[s]|length }} in 7d</span>
+            {% elif s == '14 Days' %}
+              <span class="badge status-14days">{{ cbls[s]|length }} in 14d</span>
+            {% elif s == '30 Days' %}
+              <span class="badge status-30days">{{ cbls[s]|length }} in 30d</span>
+            {% else %}
+              <span class="badge status-60days">{{ cbls[s]|length }} in 60d</span>
+            {% endif %}
+          {% endif %}
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- CBL Items -->
+    <div class="cbl-body hidden">
+      <table class="w-full text-sm">
+        <thead class="bg-gray-50 border-b border-gray-100">
+          <tr>
+            <th class="px-6 py-2 text-left text-gray-500 font-medium">CBL Name</th>
+            <th class="px-6 py-2 text-center text-gray-500 font-medium">Due Date</th>
+            <th class="px-6 py-2 text-center text-gray-500 font-medium">Status</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-50">
+          {% for s in status_order %}
+            {% for cbl in cbls[s] %}
+            <tr class="hover:bg-gray-50 transition cbl-row" data-status="{{ s }}">
+              <td class="px-6 py-2.5 text-gray-700">{{ cbl.item_name }}</td>
+              <td class="px-6 py-2.5 text-center text-gray-500">
+                {% if cbl.due_date %}
+                  {{ cbl.due_date.strftime('%m/%d/%Y') }}
+                {% else %}&mdash;{% endif %}
+              </td>
+              <td class="px-6 py-2.5 text-center">
+                {% if s == 'Overdue' %}
+                  <span class="badge status-overdue">Overdue</span>
+                {% elif s == '7 Days' %}
+                  <span class="badge status-7days">7 Days</span>
+                {% elif s == '14 Days' %}
+                  <span class="badge status-14days">14 Days</span>
+                {% elif s == '30 Days' %}
+                  <span class="badge status-30days">30 Days</span>
+                {% else %}
+                  <span class="badge status-60days">60 Days</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<script>
+function filterStatus(status) {
+  // Update pill styles
+  document.querySelectorAll('.pill-btn').forEach(btn => {
+    btn.classList.remove('bg-[#0053e2]', 'text-white');
+  });
+  const active = document.querySelector(`[data-status="${status}"]`);
+  if (active) active.classList.add('bg-[#0053e2]', 'text-white');
+
+  // Filter cards
+  document.querySelectorAll('.associate-card').forEach(card => {
+    if (status === 'all') {
+      card.style.display = '';
+    } else {
+      const statuses = card.getAttribute('data-statuses') || '';
+      card.style.display = statuses.includes(status) ? '' : 'none';
+    }
+  });
+
+  // If filtering, expand matching rows
+  document.querySelectorAll('.associate-card').forEach(card => {
+    const body = card.querySelector('.cbl-body');
+    if (!body) return;
+    if (status === 'all') {
+      body.classList.add('hidden');
+    } else if (card.style.display !== 'none') {
+      body.classList.remove('hidden');
+      // Hide non-matching rows
+      card.querySelectorAll('.cbl-row').forEach(row => {
+        row.style.display = row.dataset.status === status ? '' : 'none';
+      });
+    }
+  });
+
+  // Reset row visibility when showing all
+  if (status === 'all') {
+    document.querySelectorAll('.cbl-row').forEach(row => row.style.display = '');
+  }
+}
+</script>
+
+{% endblock %}
