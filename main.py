@@ -7,6 +7,11 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from data import get_manager_associates, get_summary, load_data, STATUS_ORDER
+from checkin_data import (
+    get_checkin_manager_detail,
+    get_checkin_summary,
+    load_checkins,
+)
 from attendance_data import (
     get_attendance_manager_detail,
     get_attendance_summary,
@@ -64,6 +69,28 @@ async def attendance_manager(request: Request, manager_name: str):
         "request": request,
         "data": data,
         "labels": EXCEPTION_LABELS,
+        "quote": quote,
+    })
+
+
+@app.get("/checkins", response_class=HTMLResponse)
+async def checkins(request: Request):
+    records = load_checkins()
+    summary = get_checkin_summary(records)
+    return templates.TemplateResponse("checkins.html", {
+        "request": request,
+        "summary": summary,
+    })
+
+
+@app.get("/checkins/manager/{manager_name}", response_class=HTMLResponse)
+async def checkins_manager(request: Request, manager_name: str):
+    manager = unquote(manager_name)
+    records = load_checkins()
+    data = get_checkin_manager_detail(records, manager)
+    return templates.TemplateResponse("checkins_manager.html", {
+        "request": request,
+        "data": data,
         "quote": quote,
     })
 

@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% block title %}PHL5 Manager Check Ins{% endblock %}
+{% block content %}
+
+<div class="mb-8">
+  <h1 class="text-3xl font-bold text-[#041f41] mb-1">PHL5 Manager Check Ins</h1>
+  <p class="text-gray-500 text-sm">Associates with pending manager check-ins &mdash; all overdue</p>
+</div>
+
+<!-- Total Card -->
+<div class="mb-4">
+  <div class="bg-[#ea1100] text-white rounded-2xl px-8 py-5 shadow-lg">
+    <div class="text-white/70 text-xs font-semibold uppercase tracking-wider">Total Associates Pending</div>
+    <div class="text-5xl font-black mt-1">{{ summary.total }}</div>
+    <div class="text-white/60 text-xs mt-1">All LATE across PHL5</div>
+  </div>
+</div>
+
+<!-- Check-ins Needed Breakdown Cards -->
+{% set bucket_styles = [
+  (1, 'bg-yellow-50 border-yellow-300 text-yellow-800'),
+  (2, 'bg-orange-50 border-orange-300 text-orange-800'),
+  (3, 'bg-red-50 border-red-300 text-red-700'),
+  (4, 'bg-rose-50 border-rose-400 text-rose-900'),
+] %}
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
+  {% for bucket, style in bucket_styles %}
+  <div class="border-2 rounded-2xl p-4 {{ style }} flex flex-col shadow-sm">
+    <div class="text-xs font-semibold uppercase tracking-wider opacity-70">Needs {{ bucket }} Check-In{{ 's' if bucket > 1 else '' }}</div>
+    <div class="text-3xl font-black mt-1">{{ summary.bucket_totals[bucket] }}</div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- By Manager Table -->
+<section class="mb-12">
+  <div class="flex items-center justify-between mb-4">
+    <h2 class="text-xl font-bold text-[#041f41]">&#128100; Check Ins by Manager</h2>
+    <span class="text-sm text-gray-400">Click a manager to view associates</span>
+  </div>
+  <div class="overflow-x-auto rounded-2xl shadow border border-gray-100">
+    <table class="w-full text-sm">
+      <thead class="bg-[#0053e2] text-white">
+        <tr>
+          <th class="px-4 py-3 text-left font-semibold">Manager</th>
+          <th class="px-4 py-3 text-center font-semibold">Total</th>
+          {% for b in summary.buckets %}
+          <th class="px-4 py-3 text-center font-semibold">Needs {{ b }}</th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-100">
+        {% for manager in summary.sorted_managers %}
+        {% set stats = summary.manager_stats[manager] %}
+        {% set tot = summary.manager_totals[manager] %}
+        <tr class="hover:bg-blue-50 transition cursor-pointer group"
+            onclick="window.location='/checkins/manager/{{ manager | urlencode }}'">
+          <td class="px-4 py-3 font-medium text-[#0053e2] group-hover:underline">{{ manager }}</td>
+          <td class="px-4 py-3 text-center font-bold text-gray-700">{{ tot }}</td>
+          {% for b in summary.buckets %}
+          {% set cnt = stats[b] %}
+          <td class="px-4 py-3 text-center">
+            {% if cnt > 0 %}
+              {% if b == 1 %}<span class="badge status-7days">{{ cnt }}</span>
+              {% elif b == 2 %}<span class="badge status-14days">{{ cnt }}</span>
+              {% elif b == 3 %}<span class="badge status-overdue">{{ cnt }}</span>
+              {% else %}<span class="badge" style="background:#fff0f3;color:#881337;border-color:#f43f5e;">{{ cnt }}</span>
+              {% endif %}
+            {% else %}
+              <span class="text-gray-300">&mdash;</span>
+            {% endif %}
+          </td>
+          {% endfor %}
+        </tr>
+        {% endfor %}
+      </tbody>
+      <!-- Totals Row -->
+      <tfoot class="bg-[#0053e2] text-white font-bold">
+        <tr>
+          <td class="px-4 py-3">Total</td>
+          <td class="px-4 py-3 text-center">{{ summary.total }}</td>
+          {% for b in summary.buckets %}
+          <td class="px-4 py-3 text-center">{{ summary.bucket_totals[b] }}</td>
+          {% endfor %}
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</section>
+
+<!-- Chart -->
+<section class="mb-12">
+  <h2 class="text-xl font-bold text-[#041f41] mb-4">&#128202; Manager Overview Chart</h2>
+  <div class="bg-white rounded-2xl shadow border border-gray-100 p-4">
+    <div style="height:380px;">
+      <canvas id="managerChart"></canvas>
+    </div>
+  </div>
+</section>
+
+<script>
+const managerStats = {{ summary.manager_stats | tojson }};
+const allMgrs      = {{ summary.sorted_managers | tojson }};
+const buckets      = {{ summary.buckets | tojson }};
+const top12        = allMgrs.slice(0, 12);
+const bucketColors = ['#ffc220', '#f59e0b', '#ea1100', '#f43f5e'];
+const bucketLabels = ['Needs 1', 'Needs 2', 'Needs 3', 'Needs 4'];
+
+const datasets = buckets.map((b, i) => ({
+  label: bucketLabels[i],
+  data: top12.map(m => managerStats[m] ? managerStats[m][b] || 0 : 0),
+  backgroundColor: bucketColors[i],
+  borderRadius: 4,
+}));
+
+new Chart(document.getElementById('managerChart'), {
+  type: 'bar',
+  data: { labels: top12, datasets },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    indexAxis: 'y',
+    plugins: { legend: { position: 'top' } },
+    scales: { x: { stacked: true, beginAtZero: true }, y: { stacked: true } }
+  }
+});
+</script>
+
+{% endblock %}

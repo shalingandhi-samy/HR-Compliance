@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block title %}{{ data.manager }} &mdash; Manager Check Ins{% endblock %}
+{% block content %}
+
+<a href="/checkins" class="inline-flex items-center gap-2 text-[#0053e2] hover:underline font-medium text-sm mb-6">
+  &#8592; Back to Check Ins Dashboard
+</a>
+
+<div class="mb-8">
+  <div class="inline-block bg-[#ea1100] text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-widest mb-2">Manager View</div>
+  <h1 class="text-3xl font-black text-[#041f41]">{{ data.manager }}</h1>
+  <p class="text-gray-500 text-sm mt-1">{{ data.total }} associate(s) with pending check-ins</p>
+</div>
+
+<!-- Bucket Summary Cards -->
+{% set bucket_styles = [
+  (1, 'bg-yellow-50 border-yellow-300 text-yellow-800'),
+  (2, 'bg-orange-50 border-orange-300 text-orange-800'),
+  (3, 'bg-red-50 border-red-300 text-red-700'),
+  (4, 'bg-rose-50 border-rose-400 text-rose-900'),
+] %}
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+  {% for bucket, style in bucket_styles %}
+  <div class="border-2 rounded-2xl p-4 {{ style }} flex flex-col shadow-sm">
+    <div class="text-xs font-semibold uppercase tracking-wider opacity-70">Needs {{ bucket }} Check-In{{ 's' if bucket > 1 else '' }}</div>
+    <div class="text-3xl font-black mt-1">{{ data.bucket_totals[bucket] }}</div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Filter Pills -->
+<div class="flex flex-wrap gap-2 mb-6">
+  <button onclick="filterBucket('all')" data-bucket="all"
+    class="pill-btn active px-4 py-1.5 rounded-full text-sm font-semibold border-2 border-[#0053e2] bg-[#0053e2] text-white transition">
+    All Associates
+  </button>
+  {% for b in data.buckets %}
+  {% if data.bucket_totals[b] > 0 %}
+  <button onclick="filterBucket({{ b }})" data-bucket="{{ b }}"
+    class="pill-btn px-4 py-1.5 rounded-full text-sm font-semibold border-2
+    {{ 'border-yellow-400 text-yellow-700 hover:bg-yellow-50' if b == 1 else
+       'border-orange-400 text-orange-700 hover:bg-orange-50' if b == 2 else
+       'border-red-400 text-red-600 hover:bg-red-50' if b == 3 else
+       'border-rose-500 text-rose-800 hover:bg-rose-50' }} transition">
+    Needs {{ b }} Check-In{{ 's' if b > 1 else '' }}
+  </button>
+  {% endif %}
+  {% endfor %}
+</div>
+
+<!-- Associates Table -->
+<div class="overflow-x-auto rounded-2xl shadow border border-gray-100">
+  <table class="w-full text-sm" id="assoc-table">
+    <thead class="bg-[#041f41] text-white">
+      <tr>
+        <th class="px-6 py-3 text-left font-semibold">Associate</th>
+        <th class="px-6 py-3 text-center font-semibold">Check-Ins Needed</th>
+        <th class="px-6 py-3 text-center font-semibold">Status</th>
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-gray-100">
+      {% for rec in data.records %}
+      <tr class="hover:bg-gray-50 transition assoc-row" data-bucket="{{ rec.checkins_needed }}">
+        <td class="px-6 py-3 font-medium text-gray-800">{{ rec.associate }}</td>
+        <td class="px-6 py-3 text-center">
+          <div class="flex items-center justify-center gap-1">
+            {% for i in range(rec.checkins_needed) %}
+              <span class="inline-block w-3 h-3 rounded-full
+                {{ 'bg-yellow-400' if rec.checkins_needed == 1 else
+                   'bg-orange-400' if rec.checkins_needed == 2 else
+                   'bg-red-500' if rec.checkins_needed == 3 else
+                   'bg-rose-600' }}"></span>
+            {% endfor %}
+            <span class="ml-2 font-bold text-gray-700">{{ rec.checkins_needed }}</span>
+          </div>
+        </td>
+        <td class="px-6 py-3 text-center">
+          <span class="badge status-overdue">{{ rec.status }}</span>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<div class="mt-3 text-xs text-gray-400" id="visible-count">Showing {{ data.total }} of {{ data.total }} associates</div>
+
+<script>
+function filterBucket(bucket) {
+  document.querySelectorAll('.pill-btn').forEach(btn => {
+    btn.classList.remove('bg-[#0053e2]', 'text-white');
+  });
+  const active = document.querySelector(`[data-bucket="${bucket}"]`);
+  if (active) active.classList.add('bg-[#0053e2]', 'text-white');
+
+  let visible = 0;
+  document.querySelectorAll('.assoc-row').forEach(row => {
+    const show = bucket === 'all' || parseInt(row.dataset.bucket) === parseInt(bucket);
+    row.style.display = show ? '' : 'none';
+    if (show) visible++;
+  });
+
+  const total = document.querySelectorAll('.assoc-row').length;
+  document.getElementById('visible-count').textContent =
+    `Showing ${visible} of ${total} associates`;
+}
+</script>
+
+{% endblock %}
