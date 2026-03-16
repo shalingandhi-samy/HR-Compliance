@@ -7,6 +7,11 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from data import get_manager_associates, get_summary, load_data, STATUS_ORDER
+from points_data import (
+    get_points_manager_detail,
+    get_points_summary,
+    load_points,
+)
 from checkin_data import (
     get_checkin_manager_detail,
     get_checkin_summary,
@@ -36,12 +41,16 @@ async def home(request: Request):
     chk_records = load_checkins()
     chk_summary = get_checkin_summary(chk_records)
 
+    pts_records = load_points()
+    pts_summary = get_points_summary(pts_records)
+
     return templates.TemplateResponse("home.html", {
         "request": request,
         "cbl_total": cbl_summary["total"],
         "att_total": att_summary["total"],
         "chk_total": chk_summary["total"],
         "chk_associates": chk_summary["total_associates"],
+        "pts_total": pts_summary["total"],
     })
 
 
@@ -110,6 +119,44 @@ async def checkins_manager(request: Request, manager_name: str):
     records = load_checkins()
     data = get_checkin_manager_detail(records, manager)
     return templates.TemplateResponse("checkins_manager.html", {
+        "request": request,
+        "data": data,
+        "quote": quote,
+    })
+
+
+@app.get("/points", response_class=HTMLResponse)
+async def points(request: Request):
+    import json
+    from dataclasses import asdict
+    records = load_points()
+    summary = get_points_summary(records)
+    records_json = json.dumps([
+        {"associate": r.associate, "win": r.win, "manager": r.manager,
+         "shift": r.shift, "occurrences": r.occurrences, "bucket": r.bucket}
+        for r in records
+    ])
+    bucket_meta_json = json.dumps(summary["bucket_meta"])
+    chart_managers = json.dumps(summary["sorted_managers"])
+    chart_occs = json.dumps([
+        summary["manager_stats"][m]["max_occ"] for m in summary["sorted_managers"]
+    ])
+    return templates.TemplateResponse("points.html", {
+        "request": request,
+        "summary": summary,
+        "records_json": records_json,
+        "bucket_meta_json": bucket_meta_json,
+        "chart_managers": chart_managers,
+        "chart_occs": chart_occs,
+    })
+
+
+@app.get("/points/manager/{manager_name}", response_class=HTMLResponse)
+async def points_manager(request: Request, manager_name: str):
+    manager = unquote(manager_name)
+    records = load_points()
+    data = get_points_manager_detail(records, manager)
+    return templates.TemplateResponse("points_manager.html", {
         "request": request,
         "data": data,
         "quote": quote,
