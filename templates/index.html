@@ -141,6 +141,20 @@
           </tr>
           {% endfor %}
         </tbody>
+        <!-- Totals Row -->
+        <tfoot class="bg-[#041f41] text-white font-bold">
+          <tr>
+            <td class="px-4 py-3">Total</td>
+            <td class="px-4 py-3 text-center">{{ total }}</td>
+            {% for s in status_order %}
+            {% set col_total = namespace(n=0) %}
+            {% for shift in summary.sorted_shifts %}
+              {% set col_total.n = col_total.n + summary.shift_stats[shift][s] %}
+            {% endfor %}
+            <td class="px-4 py-3 text-center">{{ col_total.n }}</td>
+            {% endfor %}
+          </tr>
+        </tfoot>
       </table>
     </div>
 
