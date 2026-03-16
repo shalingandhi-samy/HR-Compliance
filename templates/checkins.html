@@ -10,9 +10,9 @@
 <!-- Total Card -->
 <div class="mb-4">
   <div class="bg-[#ea1100] text-white rounded-2xl px-8 py-5 shadow-lg">
-    <div class="text-white/70 text-xs font-semibold uppercase tracking-wider">Total Associates Pending</div>
+    <div class="text-white/70 text-xs font-semibold uppercase tracking-wider">Total Check-Ins Needed</div>
     <div class="text-5xl font-black mt-1">{{ summary.total }}</div>
-    <div class="text-white/60 text-xs mt-1">All LATE across PHL5</div>
+    <div class="text-white/60 text-xs mt-1">Across {{ summary.total_associates }} associates &mdash; All LATE</div>
   </div>
 </div>
 
@@ -80,7 +80,7 @@
           <td class="px-4 py-3">Total</td>
           <td class="px-4 py-3 text-center">{{ summary.total }}</td>
           {% for b in summary.buckets %}
-          <td class="px-4 py-3 text-center">{{ summary.bucket_totals[b] }}</td>
+          <td class="px-4 py-3 text-center">{{ b * summary.bucket_totals[b] }}</td>
           {% endfor %}
         </tr>
       </tfoot>

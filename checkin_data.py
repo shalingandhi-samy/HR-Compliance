@@ -68,34 +68,42 @@ def load_checkins(force: bool = False) -> list[CheckInRecord]:
 
 def get_checkin_summary(records: list[CheckInRecord]) -> dict:
     """Build summary stats for the check-in dashboard."""
-    total = len(records)
+    # Grand total = sum of all check-ins needed across all associates
+    total_checkins = sum(r.checkins_needed for r in records)
+    total_associates = len(records)
 
     # Bucket totals (how many associates need 1/2/3/4 check-ins)
     bucket_totals = {b: 0 for b in CHECKIN_BUCKETS}
     for r in records:
-        key = min(r.checkins_needed, 4)  # cap at 4
+        key = min(r.checkins_needed, 4)
         if key in bucket_totals:
             bucket_totals[key] += 1
 
-    # Per manager per bucket
+    # Per manager: count associates per bucket + sum of checkins_needed
     manager_stats: dict[str, dict[int, int]] = {}
+    manager_checkin_sums: dict[str, int] = {}
     for r in records:
         if r.manager not in manager_stats:
             manager_stats[r.manager] = {b: 0 for b in CHECKIN_BUCKETS}
+            manager_checkin_sums[r.manager] = 0
         key = min(r.checkins_needed, 4)
         if key in manager_stats[r.manager]:
             manager_stats[r.manager][key] += 1
+        manager_checkin_sums[r.manager] += r.checkins_needed
 
-    manager_totals = {m: sum(v.values()) for m, v in manager_stats.items()}
+    # Sort by total check-ins needed desc
     sorted_managers = sorted(
-        manager_stats.keys(), key=lambda m: manager_totals[m], reverse=True
+        manager_stats.keys(),
+        key=lambda m: manager_checkin_sums[m],
+        reverse=True,
     )
 
     return {
-        "total": total,
+        "total": total_checkins,
+        "total_associates": total_associates,
         "bucket_totals": bucket_totals,
         "manager_stats": manager_stats,
-        "manager_totals": manager_totals,
+        "manager_totals": manager_checkin_sums,
         "sorted_managers": sorted_managers,
         "buckets": CHECKIN_BUCKETS,
     }
@@ -114,9 +122,12 @@ def get_checkin_manager_detail(records: list[CheckInRecord], manager: str) -> di
         if key in bucket_totals:
             bucket_totals[key] += 1
 
+    total_checkins = sum(r.checkins_needed for r in filtered)
+
     return {
         "manager": manager,
-        "total": len(filtered),
+        "total": total_checkins,
+        "total_associates": len(filtered),
         "records": sorted_assocs,
         "bucket_totals": bucket_totals,
         "buckets": CHECKIN_BUCKETS,
