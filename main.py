@@ -2,7 +2,7 @@
 from urllib.parse import quote, unquote
 
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -197,6 +197,17 @@ async def pto_manager(request: Request, manager_name: str):
         "data": data,
         "quote": quote,
     })
+
+
+@app.post("/refresh")
+async def refresh_all_data():
+    """Force-reload all Excel data caches."""
+    load_data(force=True)
+    load_attendance(force=True)
+    load_checkins(force=True)
+    load_points(force=True)
+    load_pto(force=True)
+    return RedirectResponse(url="/", status_code=303)
 
 
 if __name__ == "__main__":

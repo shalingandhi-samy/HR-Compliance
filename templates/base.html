@@ -36,7 +36,17 @@
       <div class="flex items-center gap-3">
         <span class="text-white font-bold text-lg tracking-wide">PHL5 COMPLIANCE DASHBOARD</span>
       </div>
-      <a href="/" class="text-white/80 hover:text-white text-sm transition">&#8962; Home</a>
+      <div class="flex items-center gap-4">
+        <a href="/" class="text-white/80 hover:text-white text-sm transition">&#8962; Home</a>
+        <form method="post" action="/refresh" id="refresh-form">
+          <button type="submit"
+            id="refresh-btn"
+            class="flex items-center gap-2 bg-[#ffc220] hover:bg-[#f5b800] text-[#041f41] text-sm font-bold px-4 py-1.5 rounded-full transition-all duration-200 shadow"
+            onclick="this.disabled=true; this.innerHTML='&#8987; Refreshing&hellip;';">
+            &#128260; Refresh Data
+          </button>
+        </form>
+      </div>
     </div>
   </nav>
 
