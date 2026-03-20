@@ -56,6 +56,23 @@ def scheduled_refresh():
 
 app = FastAPI(title="PHL5 Compliance Dashboard")
 
+
+@app.on_event("startup")
+async def startup_event():
+    """Authenticate + load all data eagerly on startup.
+
+    This triggers the browser login popup immediately when the server starts
+    rather than waiting for the first HTTP request.
+    """
+    logger.info("🚀 Starting up — authenticating with OneDrive...")
+    onedrive_client.refresh_file_bytes()   # authenticate + download once
+    load_data()
+    load_attendance()
+    load_checkins()
+    load_points()
+    load_pto()
+    logger.info("✅ All data loaded and ready!")
+
 # Auto-refresh at 8:30 AM and 8:30 PM every day
 scheduler = BackgroundScheduler()
 scheduler.add_job(scheduled_refresh, CronTrigger(hour=8, minute=30))

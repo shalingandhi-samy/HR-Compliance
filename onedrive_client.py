@@ -71,7 +71,7 @@ def _save_token_cache() -> None:
 
 
 def _get_access_token() -> str:
-    """Acquire a token silently if cached, else prompt via device code flow."""
+    """Acquire a token silently if cached, else open browser for interactive login."""
     app = _get_msal_app()
     accounts = app.get_accounts()
     result = None
@@ -80,14 +80,13 @@ def _get_access_token() -> str:
         result = app.acquire_token_silent(SCOPES, account=accounts[0])
 
     if not result:
-        logger.info("🔐 No cached token — starting device code flow...")
-        flow = app.initiate_device_flow(scopes=SCOPES)
-        if "user_code" not in flow:
-            raise RuntimeError(f"Failed to initiate device flow: {flow}")
+        logger.info("🔐 No cached token — opening browser for login...")
         print("\n" + "=" * 60)
-        print(flow["message"])  # e.g. "Go to https://microsoft.com/devicelogin and enter code ABCXYZ"
+        print("🔐 A browser window will open for Walmart/Microsoft login.")
+        print("   Sign in with your Walmart credentials to authorize access.")
         print("=" * 60 + "\n")
-        result = app.acquire_token_by_device_flow(flow)
+        # Opens a real browser window on Windows — no terminal code needed!
+        result = app.acquire_token_interactive(scopes=SCOPES)
 
     _save_token_cache()
 
