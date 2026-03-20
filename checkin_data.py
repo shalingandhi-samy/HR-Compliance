@@ -1,14 +1,13 @@
 """Data loading and processing for Manager Check Ins tab."""
 from __future__ import annotations
 
-import os
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Optional
 
 import openpyxl
 
-EXCEL_PATH = os.path.join(os.path.dirname(__file__), "phl5_compliance.xlsx")
+from onedrive_client import get_workbook
 
 # Number of check-ins needed breakdown
 CHECKIN_BUCKETS = [1, 2, 3, 4]
@@ -33,8 +32,8 @@ def load_checkins(force: bool = False) -> list[CheckInRecord]:
         return _cache
 
     records: list[CheckInRecord] = []
-    wb = openpyxl.load_workbook(EXCEL_PATH, data_only=True, read_only=True)
-    ws = wb["Manager Check Ins"]
+    wb = get_workbook()
+    ws = wb["Manager Check-Ins"]
 
     # First two rows are title/sub-header — skip them
     data_started = False

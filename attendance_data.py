@@ -1,14 +1,13 @@
 """Data loading and processing for Attendance Exceptions tab."""
 from __future__ import annotations
 
-import os
 from dataclasses import dataclass
 from datetime import datetime, time
 from typing import Optional
 
 import openpyxl
 
-EXCEL_PATH = os.path.join(os.path.dirname(__file__), "phl5_compliance.xlsx")
+from onedrive_client import get_workbook
 
 EXCEPTION_TYPES = [
     "AT_ABSENT",
@@ -67,7 +66,7 @@ def load_attendance(force: bool = False) -> list[AttendanceRecord]:
         return _cache
 
     records: list[AttendanceRecord] = []
-    wb = openpyxl.load_workbook(EXCEL_PATH, data_only=True, read_only=True)
+    wb = get_workbook()
     ws = wb["Attendance Exceptions"]
 
     header_found = False

@@ -9,6 +9,9 @@ dependencies = [
     "jinja2",
     "openpyxl",
     "python-multipart",
+    "apscheduler",
+    "msal",
+    "requests",
 ]
 
 [[tool.uv.index]]

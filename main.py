@@ -29,7 +29,38 @@ from attendance_data import (
     EXCEPTION_LABELS,
 )
 
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.cron import CronTrigger
+import logging
+
+import onedrive_client
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+
+def scheduled_refresh():
+    """Auto-refresh all data caches on schedule.
+
+    Downloads fresh bytes from OneDrive once, then re-parses all sheets.
+    """
+    logger.info("⏰ Scheduled refresh triggered — downloading latest Excel from OneDrive...")
+    onedrive_client.refresh_file_bytes()
+    load_data(force=True)
+    load_attendance(force=True)
+    load_checkins(force=True)
+    load_points(force=True)
+    load_pto(force=True)
+    logger.info("✅ Scheduled refresh complete!")
+
+
 app = FastAPI(title="PHL5 Compliance Dashboard")
+
+# Auto-refresh at 8:30 AM and 8:30 PM every day
+scheduler = BackgroundScheduler()
+scheduler.add_job(scheduled_refresh, CronTrigger(hour=8, minute=30))
+scheduler.add_job(scheduled_refresh, CronTrigger(hour=20, minute=30))
+scheduler.start()
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
@@ -201,7 +232,8 @@ async def pto_manager(request: Request, manager_name: str):
 
 @app.post("/refresh")
 async def refresh_all_data():
-    """Force-reload all Excel data caches."""
+    """Download latest Excel from OneDrive and reload all data caches."""
+    onedrive_client.refresh_file_bytes()
     load_data(force=True)
     load_attendance(force=True)
     load_checkins(force=True)
@@ -212,4 +244,4 @@ async def refresh_all_data():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main:app", host="127.0.0.1", port=8501, reload=False)
+    uvicorn.run("main:app", host="0.0.0.0", port=8501, reload=False)

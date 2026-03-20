@@ -1,14 +1,13 @@
 """Data loading and processing for PHL5 Compliance Dashboard."""
 from __future__ import annotations
 
-import os
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Optional
 
 import openpyxl
 
-EXCEL_PATH = os.path.join(os.path.dirname(__file__), "phl5_compliance.xlsx")
+from onedrive_client import get_workbook
 
 STATUS_COLS = {
     "Overdue": 6,
@@ -65,8 +64,8 @@ def load_data(force: bool = False) -> list[CBLRecord]:
         return _cache
 
     records: list[CBLRecord] = []
-    wb = openpyxl.load_workbook(EXCEL_PATH, data_only=True, read_only=True)
-    ws = wb["Ulearns"]
+    wb = get_workbook()
+    ws = wb["ULearns"]
 
     header_found = False
     for row in ws.iter_rows(values_only=True):

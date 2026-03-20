@@ -1,14 +1,13 @@
 """Data loading and processing for Pending Time Off Requests tab."""
 from __future__ import annotations
 
-import os
 from dataclasses import dataclass
 from datetime import datetime, time
 from typing import Optional
 
 import openpyxl
 
-EXCEL_PATH = os.path.join(os.path.dirname(__file__), "phl5_compliance.xlsx")
+from onedrive_client import get_workbook
 
 
 def _fmt_duration(t: time) -> str:
@@ -49,7 +48,7 @@ def load_pto(force: bool = False) -> list[PTORecord]:
         return _cache
 
     records: list[PTORecord] = []
-    wb = openpyxl.load_workbook(EXCEL_PATH, data_only=True, read_only=True)
+    wb = get_workbook()
     ws = wb["Pending Time Off Requests"]
 
     header_passed = False

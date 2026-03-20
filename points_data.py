@@ -1,14 +1,13 @@
 """Data loading and processing for Attendance Points 5+ tab."""
 from __future__ import annotations
 
-import os
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Optional
 
 import openpyxl
 
-EXCEL_PATH = os.path.join(os.path.dirname(__file__), "phl5_compliance.xlsx")
+from onedrive_client import get_workbook
 
 
 @dataclass
@@ -32,8 +31,8 @@ def load_points(force: bool = False) -> list[PointsRecord]:
         return _cache
 
     records: list[PointsRecord] = []
-    wb = openpyxl.load_workbook(EXCEL_PATH, data_only=True, read_only=True)
-    ws = wb["Attendance Points 5+"]
+    wb = get_workbook()
+    ws = wb["Attendance +5"]
 
     header_passed = False
     for row in ws.iter_rows(values_only=True):
