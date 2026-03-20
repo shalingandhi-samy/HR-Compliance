@@ -34,6 +34,7 @@ from apscheduler.triggers.cron import CronTrigger
 import logging
 
 import onedrive_client
+from file_watcher import start_file_watcher
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -72,6 +73,7 @@ async def startup_event():
     load_points()
     load_pto()
     logger.info("All data loaded and ready!")
+    start_file_watcher(scheduled_refresh)
 
 # Auto-refresh at 8:30 AM and 8:30 PM every day
 scheduler = BackgroundScheduler()
