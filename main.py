@@ -44,14 +44,14 @@ def scheduled_refresh():
 
     Downloads fresh bytes from OneDrive once, then re-parses all sheets.
     """
-    logger.info("⏰ Scheduled refresh triggered — downloading latest Excel from OneDrive...")
+    logger.info("Scheduled refresh triggered - downloading latest Excel from OneDrive...")
     onedrive_client.refresh_file_bytes()
     load_data(force=True)
     load_attendance(force=True)
     load_checkins(force=True)
     load_points(force=True)
     load_pto(force=True)
-    logger.info("✅ Scheduled refresh complete!")
+    logger.info("Scheduled refresh complete!")
 
 
 app = FastAPI(title="PHL5 Compliance Dashboard")
@@ -64,14 +64,14 @@ async def startup_event():
     This triggers the browser login popup immediately when the server starts
     rather than waiting for the first HTTP request.
     """
-    logger.info("🚀 Starting up — authenticating with OneDrive...")
+    logger.info("Starting up - authenticating with OneDrive...")
     onedrive_client.refresh_file_bytes()   # authenticate + download once
     load_data()
     load_attendance()
     load_checkins()
     load_points()
     load_pto()
-    logger.info("✅ All data loaded and ready!")
+    logger.info("All data loaded and ready!")
 
 # Auto-refresh at 8:30 AM and 8:30 PM every day
 scheduler = BackgroundScheduler()

@@ -67,11 +67,14 @@ def _get_msal_app() -> msal.PublicClientApplication:
 def _save_token_cache() -> None:
     if _token_cache.has_state_changed:
         TOKEN_CACHE_PATH.write_text(_token_cache.serialize(), encoding="utf-8")
-        logger.info("🔑 Token cache saved to disk.")
+        logger.info("Token cache saved to disk.")
 
 
 def _get_access_token() -> str:
-    """Acquire a token silently if cached, else open browser for interactive login."""
+    """Acquire a token silently if cached, else raise with helpful message.
+
+    The server expects authentication to be done first via authenticate.py.
+    """
     app = _get_msal_app()
     accounts = app.get_accounts()
     result = None
@@ -80,13 +83,10 @@ def _get_access_token() -> str:
         result = app.acquire_token_silent(SCOPES, account=accounts[0])
 
     if not result:
-        logger.info("🔐 No cached token — opening browser for login...")
-        print("\n" + "=" * 60)
-        print("🔐 A browser window will open for Walmart/Microsoft login.")
-        print("   Sign in with your Walmart credentials to authorize access.")
-        print("=" * 60 + "\n")
-        # Opens a real browser window on Windows — no terminal code needed!
-        result = app.acquire_token_interactive(scopes=SCOPES)
+        raise RuntimeError(
+            "No valid token found. Please run authenticate.py first:\n"
+            "  uv run python authenticate.py"
+        )
 
     _save_token_cache()
 
@@ -111,19 +111,19 @@ def _download_from_onedrive() -> bytes:
 
     # Approach A: direct user drive path
     url_a = f"{GRAPH_BASE}/users/{FILE_OWNER_EMAIL}/drive/root:/{FILE_PATH_IN_DRIVE}:/content"
-    logger.info(f"📥 Fetching from OneDrive (direct path)...")
+    logger.info("Fetching from OneDrive (direct path)...")
 
     resp = requests.get(url_a, headers=headers, allow_redirects=True, proxies=PROXIES, timeout=30)
 
     if resp.status_code in (403, 404):
         # Approach B: sharing URL
-        logger.warning(f"Direct path returned {resp.status_code} — trying sharing URL...")
+        logger.warning(f"Direct path returned {resp.status_code} - trying sharing URL...")
         share_id = _encode_sharing_url(FILE_SHARING_URL)
         url_b = f"{GRAPH_BASE}/shares/{share_id}/driveItem/content"
         resp = requests.get(url_b, headers=headers, allow_redirects=True, proxies=PROXIES, timeout=30)
 
     resp.raise_for_status()
-    logger.info(f"✅ Downloaded {len(resp.content):,} bytes from OneDrive")
+    logger.info(f"Downloaded {len(resp.content):,} bytes from OneDrive")
     return resp.content
 
 
@@ -139,9 +139,9 @@ def refresh_file_bytes() -> None:
     try:
         _file_bytes = _download_from_onedrive()
     except Exception as exc:
-        logger.error(f"❌ OneDrive download failed: {exc}")
+        logger.error(f"OneDrive download failed: {exc}")
         if LOCAL_FALLBACK_PATH.exists():
-            logger.warning("⚠️  Falling back to local Excel file.")
+            logger.warning("Falling back to local Excel file.")
             _file_bytes = LOCAL_FALLBACK_PATH.read_bytes()
         else:
             raise RuntimeError(
