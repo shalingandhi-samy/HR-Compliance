@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PHL5 HR Compliance</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+     background:#f0f4ff;color:#1f2937;font-size:14px}
+.topbar{background:#0053e2;color:#fff;padding:.75rem 1.5rem;
+        display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem}
+.topbar h1{font-size:1.1rem;font-weight:800;display:flex;align-items:center;gap:.5rem}
+.topbar .meta{font-size:.75rem;opacity:.8}
+.sparkbar{background:#ffc220;height:4px}
+.tabs{background:#fff;border-bottom:2px solid #e5e7eb;padding:0 1.5rem;
+      display:flex;gap:0;overflow-x:auto}
+.tab-btn{padding:.8rem 1.2rem;border:none;background:none;cursor:pointer;
+          font-size:.83rem;font-weight:600;color:#6b7280;border-bottom:3px solid transparent;
+          white-space:nowrap;transition:all .15s}
+.tab-btn.active{color:#0053e2;border-bottom-color:#0053e2}
+.tab-btn:hover:not(.active){color:#0053e2}
+.container{max-width:1200px;margin:0 auto;padding:1.5rem}
+.tab-pane{display:none}.tab-pane.active{display:block}
+.cards{display:flex;gap:.75rem;flex-wrap:wrap;margin-bottom:1.5rem}
+.card{flex:1;min-width:130px;border-radius:10px;padding:1rem 1.2rem;
+      color:#fff;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.12)}
+.card .val{font-size:1.9rem;font-weight:800}
+.card .lbl{font-size:.75rem;margin-top:2px;opacity:.9}
+.section{background:#fff;border-radius:10px;padding:1.2rem 1.5rem;
+          box-shadow:0 1px 5px rgba(0,0,0,.07);margin-bottom:1.5rem}
+.section h2{font-size:1rem;font-weight:700;color:#0053e2;margin-bottom:1rem}
+.chart-wrap{height:260px;margin-bottom:1.5rem}
+.toolbar{display:flex;gap:.5rem;margin-bottom:.8rem;flex-wrap:wrap;align-items:center}
+.search{padding:.4rem .8rem;border:1.5px solid #d1d5db;border-radius:6px;
+         font-size:.83rem;width:220px;outline:none}
+.search:focus{border-color:#0053e2}
+.filter-btn{padding:.35rem .8rem;border:1.5px solid #0053e2;border-radius:6px;
+             background:#fff;color:#0053e2;font-size:.78rem;font-weight:600;cursor:pointer}
+.filter-btn.on{background:#0053e2;color:#fff}
+table{width:100%;border-collapse:collapse;font-size:.83rem}
+th{background:#0053e2;color:#fff;padding:8px 10px;text-align:left;
+   white-space:nowrap;cursor:pointer;user-select:none}
+th:hover{background:#0044c1}
+td{padding:7px 10px;border-bottom:1px solid #f0f0f0}
+tr:nth-child(even) td{background:#f8f9ff}
+tr:hover td{background:#e8eeff;cursor:pointer}
+.badge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:.72rem;
+        font-weight:700;color:#fff;margin:1px}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;
+           align-items:flex-start;justify-content:center;padding:2rem 1rem;overflow-y:auto}
+.modal-bg.open{display:flex}
+.modal{background:#fff;border-radius:12px;width:100%;max-width:800px;
+        box-shadow:0 8px 32px rgba(0,0,0,.2);overflow:hidden}
+.modal-head{background:#0053e2;color:#fff;padding:1rem 1.5rem;
+             display:flex;justify-content:space-between;align-items:center}
+.modal-head h3{font-size:1rem;font-weight:700}
+.modal-close{background:none;border:none;color:#fff;font-size:1.4rem;
+               cursor:pointer;padding:0 .3rem;line-height:1}
+.modal-body{padding:1.5rem;max-height:70vh;overflow-y:auto}
+.empty{color:#9ca3af;font-size:.85rem;padding:1rem 0}
+footer{text-align:center;color:#9ca3af;font-size:.75rem;padding:1.5rem}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>
+    <svg width="24" height="24" viewBox="0 0 100 100">
+      <circle cx="50" cy="50" r="48" fill="#ffc220"/>
+      <text x="50" y="67" text-anchor="middle" font-size="54" font-weight="900" fill="#0053e2" font-family="Arial">W</text>
+    </svg>
+    PHL5 HR Compliance Dashboard
+  </h1>
+  <span class="meta">Snapshot: __GENERATED_AT__ &bull; Eagle WiFi / VPN required</span>
+</div>
+<div class="sparkbar"></div>
+
+<div class="tabs" role="tablist">
+  <button class="tab-btn active" onclick="showTab('overview')" role="tab">Overview</button>
+  <button class="tab-btn" onclick="showTab('cbl')" role="tab">CBL Compliance</button>
+  <button class="tab-btn" onclick="showTab('att')" role="tab">Attendance Exceptions</button>
+  <button class="tab-btn" onclick="showTab('chk')" role="tab">Manager Check-Ins</button>
+  <button class="tab-btn" onclick="showTab('pts')" role="tab">Attendance Points</button>
+  <button class="tab-btn" onclick="showTab('pto')" role="tab">Pending PTO</button>
+</div>
+
+<div class="container">
+
+<!-- OVERVIEW -->
+<div id="tab-overview" class="tab-pane active">
+  <div class="cards" id="ov-cards"></div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:1rem">
+    <div class="section"><h2>CBL Status Breakdown</h2><div class="chart-wrap"><canvas id="ov-cbl-chart"></canvas></div></div>
+    <div class="section"><h2>Top Exceptions by Type</h2><div class="chart-wrap"><canvas id="ov-att-chart"></canvas></div></div>
+  </div>
+</div>
+
+<!-- CBL -->
+<div id="tab-cbl" class="tab-pane">
+  <div class="cards" id="cbl-cards"></div>
+  <div class="section">
+    <h2>CBLs by Manager</h2>
+    <div class="chart-wrap"><canvas id="cbl-chart"></canvas></div>
+  </div>
+  <div class="section">
+    <h2>Manager Detail <span style="font-size:.8rem;color:#6b7280;font-weight:400">&mdash; click a row to see associates</span></h2>
+    <div class="toolbar">
+      <input class="search" id="cbl-search" placeholder="Search manager..." oninput="renderCblTable()">
+    </div>
+    <div style="overflow-x:auto"><table id="cbl-table"><thead><tr>
+      <th onclick="sortCbl('manager')">Manager</th>
+      <th onclick="sortCbl('Overdue')">Overdue</th>
+      <th onclick="sortCbl('7 Days')">7 Days</th>
+      <th onclick="sortCbl('14 Days')">14 Days</th>
+      <th onclick="sortCbl('30 Days')">30 Days</th>
+      <th onclick="sortCbl('60 Days')">60 Days</th>
+      <th onclick="sortCbl('total')">Total</th>
+    </tr></thead><tbody id="cbl-tbody"></tbody></table></div>
+  </div>
+</div>
+
+<!-- ATTENDANCE -->
+<div id="tab-att" class="tab-pane">
+  <div class="cards" id="att-cards"></div>
+  <div class="section">
+    <h2>Exceptions by Manager (Top 15)</h2>
+    <div class="chart-wrap"><canvas id="att-chart"></canvas></div>
+  </div>
+  <div class="section">
+    <h2>Manager Detail <span style="font-size:.8rem;color:#6b7280;font-weight:400">&mdash; click a row for associates</span></h2>
+    <div class="toolbar">
+      <input class="search" id="att-search" placeholder="Search manager..." oninput="renderAttTable()">
+    </div>
+    <div style="overflow-x:auto"><table id="att-table"><thead><tr>
+      <th onclick="sortAtt('manager')">Manager</th>
+      <th>Absent</th><th>No Call</th><th>Early In</th>
+      <th>Early Out</th><th>Inc. Shift</th><th>Late In</th>
+      <th onclick="sortAtt('total')">Total</th>
+    </tr></thead><tbody id="att-tbody"></tbody></table></div>
+  </div>
+</div>
+
+<!-- CHECKINS -->
+<div id="tab-chk" class="tab-pane">
+  <div class="cards" id="chk-cards"></div>
+  <div class="section">
+    <h2>Check-Ins Needed by Manager</h2>
+    <div class="chart-wrap"><canvas id="chk-chart"></canvas></div>
+  </div>
+  <div class="section">
+    <h2>Manager Detail <span style="font-size:.8rem;color:#6b7280;font-weight:400">&mdash; click a row for associates</span></h2>
+    <div class="toolbar">
+      <input class="search" id="chk-search" placeholder="Search manager..." oninput="renderChkTable()">
+    </div>
+    <div style="overflow-x:auto"><table><thead><tr>
+      <th>Manager</th><th>Associates</th><th>Total Check-Ins Needed</th>
+    </tr></thead><tbody id="chk-tbody"></tbody></table></div>
+  </div>
+</div>
+
+<!-- POINTS -->
+<div id="tab-pts" class="tab-pane">
+  <div class="cards" id="pts-cards"></div>
+  <div class="section">
+    <h2>Associates at 5+ Points by Manager</h2>
+    <div class="chart-wrap"><canvas id="pts-chart"></canvas></div>
+  </div>
+  <div class="section">
+    <h2>Associate List <span style="font-size:.8rem;color:#6b7280;font-weight:400">&mdash; click manager row for details</span></h2>
+    <div class="toolbar">
+      <input class="search" id="pts-search" placeholder="Search manager / associate..." oninput="renderPtsTable()">
+    </div>
+    <div style="overflow-x:auto"><table><thead><tr>
+      <th>Manager</th><th>Associates</th><th>Highest Occurrences</th>
+    </tr></thead><tbody id="pts-tbody"></tbody></table></div>
+  </div>
+</div>
+
+<!-- PTO -->
+<div id="tab-pto" class="tab-pane">
+  <div class="cards" id="pto-cards"></div>
+  <div class="section">
+    <h2>PTO by Shift</h2>
+    <div class="chart-wrap"><canvas id="pto-chart"></canvas></div>
+  </div>
+  <div class="section">
+    <h2>All Pending Requests</h2>
+    <div class="toolbar">
+      <input class="search" id="pto-search" placeholder="Search manager / associate..." oninput="renderPtoTable()">
+    </div>
+    <div style="overflow-x:auto"><table><thead><tr>
+      <th>Associate</th><th>Manager</th><th>Submitted</th><th>Requested</th><th>Time</th><th>Shift</th>
+    </tr></thead><tbody id="pto-tbody"></tbody></table></div>
+  </div>
+</div>
+
+<footer>PHL5 HR Compliance &bull; Snapshot: __GENERATED_AT__ &bull; Eagle WiFi / Walmart VPN required</footer>
+</div>
+
+<!-- MODAL -->
+<div class="modal-bg" id="modal" onclick="closeModalBg(event)">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="modal-title">Detail</h3>
+      <button class="modal-close" onclick="closeModal()" aria-label="Close">&times;</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+
+<script>
+const RAW = __DATA_JSON__;
+
+// ---- utilities ----
+const STATUS_COLORS = {
+  'Overdue':'#ea1100','7 Days':'#c2410c','14 Days':'#d97706',
+  '30 Days':'#0053e2','60 Days':'#2a8703'
+};
+const CHART_PALETTE = ['#0053e2','#ea1100','#ffc220','#2a8703','#7c3aed','#0891b2','#d97706','#6b7280','#be185d','#065f46'];
+
+function badge(text, color){ return `<span class="badge" style="background:${color}">${text}</span>`; }
+function q(id){ return document.getElementById(id); }
+
+// ---- tabs ----
+function showTab(name){
+  document.querySelectorAll('.tab-pane').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(el=>el.classList.remove('active'));
+  q('tab-'+name).classList.add('active');
+  event.currentTarget.classList.add('active');
+}
+
+// ---- modal ----
+function openModal(title, bodyHtml){
+  q('modal-title').textContent = title;
+  q('modal-body').innerHTML = bodyHtml;
+  q('modal').classList.add('open');
+}
+function closeModal(){ q('modal').classList.remove('open'); }
+function closeModalBg(e){ if(e.target===q('modal')) closeModal(); }
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeModal(); });
+
+// ---- sort state ----
+const cblSort={col:'total',asc:false};
+const attSort={col:'total',asc:false};
+
+// ================================================================
+// OVERVIEW
+// ================================================================
+function buildOverview(){
+  const cblTotal = RAW.cbls.length;
+  const overdue  = RAW.cbls.filter(r=>r.status==='Overdue').length;
+  const attTotal = RAW.att.length;
+  const chkTotal = RAW.chk.reduce((s,r)=>s+r.needed,0);
+  const ptsTotal = RAW.pts.length;
+  const ptoTotal = RAW.pto.length;
+
+  q('ov-cards').innerHTML = [
+    `<div class="card" style="background:#0053e2"><div class="val">${cblTotal}</div><div class="lbl">CBLs Due</div></div>`,
+    `<div class="card" style="background:#ea1100"><div class="val">${overdue}</div><div class="lbl">Overdue CBLs</div></div>`,
+    `<div class="card" style="background:#c2410c"><div class="val">${attTotal}</div><div class="lbl">Att. Exceptions</div></div>`,
+    `<div class="card" style="background:#d97706"><div class="val">${chkTotal}</div><div class="lbl">Check-Ins Needed</div></div>`,
+    `<div class="card" style="background:#7f1d1d"><div class="val">${ptsTotal}</div><div class="lbl">At 5+ Points</div></div>`,
+    `<div class="card" style="background:#2a8703"><div class="val">${ptoTotal}</div><div class="lbl">Pending PTO</div></div>`,
+  ].join('');
+
+  // CBL donut
+  const statusCounts = {};
+  RAW.statusOrder.forEach(s=>statusCounts[s]=0);
+  RAW.cbls.forEach(r=>{ if(statusCounts[r.status]!==undefined) statusCounts[r.status]++; });
+  new Chart(q('ov-cbl-chart'),{ type:'doughnut', data:{
+    labels: RAW.statusOrder,
+    datasets:[{data: RAW.statusOrder.map(s=>statusCounts[s]),
+               backgroundColor: RAW.statusOrder.map(s=>STATUS_COLORS[s])}]
+  }, options:{ responsive:true, maintainAspectRatio:false,
+    plugins:{legend:{position:'right'}} } });
+
+  // Att bar
+  const typeCounts = {};
+  RAW.att.forEach(r=>{ typeCounts[r.type]=(typeCounts[r.type]||0)+1; });
+  const types = Object.entries(typeCounts).sort((a,b)=>b[1]-a[1]);
+  new Chart(q('ov-att-chart'),{ type:'bar', data:{
+    labels: types.map(t=>t[0]),
+    datasets:[{label:'Count', data:types.map(t=>t[1]),
+               backgroundColor:'#ea1100', borderRadius:4}]
+  }, options:{ responsive:true, maintainAspectRatio:false, indexAxis:'y',
+    plugins:{legend:{display:false}}, scales:{x:{beginAtZero:true}} } });
+}
+
+// ================================================================
+// CBL
+// ================================================================
+function cblByManager(){
+  const map={};
+  RAW.cbls.forEach(r=>{
+    if(!map[r.manager]) map[r.manager]={manager:r.manager,records:[]};
+    map[r.manager].records.push(r);
+  });
+  return Object.values(map).map(m=>{
+    const counts={}; RAW.statusOrder.forEach(s=>counts[s]=0);
+    m.records.forEach(r=>counts[r.status]=(counts[r.status]||0)+1);
+    return {...m, counts, total:m.records.length};
+  }).sort((a,b)=>b.total-a.total);
+}
+
+let cblManagers=[];
+function buildCbl(){
+  cblManagers = cblByManager();
+  const overdue=RAW.cbls.filter(r=>r.status==='Overdue').length;
+  q('cbl-cards').innerHTML=[
+    `<div class="card" style="background:#0053e2"><div class="val">${RAW.cbls.length}</div><div class="lbl">Total CBLs Due</div></div>`,
+    `<div class="card" style="background:#ea1100"><div class="val">${overdue}</div><div class="lbl">Overdue</div></div>`,
+    `<div class="card" style="background:#c2410c"><div class="val">${RAW.cbls.filter(r=>r.status==='7 Days').length}</div><div class="lbl">Due in 7 Days</div></div>`,
+    `<div class="card" style="background:#d97706"><div class="val">${RAW.cbls.filter(r=>r.status==='14 Days').length}</div><div class="lbl">Due in 14 Days</div></div>`,
+  ].join('');
+
+  const top=cblManagers.slice(0,12);
+  new Chart(q('cbl-chart'),{ type:'bar', data:{
+    labels:top.map(m=>m.manager),
+    datasets: RAW.statusOrder.map(s=>({ label:s, data:top.map(m=>m.counts[s]),
+      backgroundColor:STATUS_COLORS[s] }))
+  }, options:{ responsive:true, maintainAspectRatio:false,
+    plugins:{legend:{position:'bottom'}},
+    scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true}} } });
+
+  renderCblTable();
+}
+
+function sortCbl(col){
+  if(cblSort.col===col) cblSort.asc=!cblSort.asc; else{cblSort.col=col;cblSort.asc=false;}
+  renderCblTable();
+}
+
+function renderCblTable(){
+  const q2=q('cbl-search').value.toLowerCase();
+  let rows=cblManagers.filter(m=>m.manager.toLowerCase().includes(q2));
+  rows.sort((a,b)=>{
+    const col=cblSort.col;
+    const va = col==='manager'?a.manager:col==='total'?a.total:(a.counts[col]||0);
+    const vb = col==='manager'?b.manager:col==='total'?b.total:(b.counts[col]||0);
+    return cblSort.asc?(va>vb?1:-1):(va<vb?1:-1);
+  });
+  q('cbl-tbody').innerHTML = rows.map(m=>`
+    <tr onclick="cblDrill('${m.manager.replace(/'/g,"\\'")}')">
+      <td><b>${m.manager}</b></td>
+      ${RAW.statusOrder.map(s=>`<td>${m.counts[s]?badge(m.counts[s],STATUS_COLORS[s]):''}</td>`).join('')}
+      <td><b>${m.total}</b></td>
+    </tr>`).join('') || '<tr><td colspan="7" class="empty">No results</td></tr>';
+}
+
+function cblDrill(mgr){
+  const recs=RAW.cbls.filter(r=>r.manager===mgr);
+  const rows=recs.map(r=>`<tr><td>${r.associate}</td><td>${badge(r.status,STATUS_COLORS[r.status]||'#555')}</td><td>${r.item}</td><td>${r.due}</td><td>${r.shift}</td></tr>`).join('');
+  openModal(`CBLs — ${mgr}`,
+    `<table style="width:100%;font-size:.83rem;border-collapse:collapse">
+      <thead><tr>${['Associate','Status','Item','Due Date','Shift'].map(h=>`<th style="background:#0053e2;color:#fff;padding:6px 10px;text-align:left">${h}</th>`).join('')}</tr></thead>
+      <tbody>${rows}</tbody></table>`);
+}
+
+// ================================================================
+// ATTENDANCE
+// ================================================================
+const ATT_TYPES=['Absent','Absent No Call','Early In','Early Out','Incomplete Shift','Late In'];
+function attByManager(){
+  const map={};
+  RAW.att.forEach(r=>{
+    if(!map[r.manager]) map[r.manager]={manager:r.manager,records:[],counts:{}};
+    map[r.manager].records.push(r);
+    map[r.manager].counts[r.type]=(map[r.manager].counts[r.type]||0)+1;
+  });
+  return Object.values(map).map(m=>({...m,total:m.records.length})).sort((a,b)=>b.total-a.total);
+}
+
+let attManagers=[];
+function buildAtt(){
+  attManagers=attByManager();
+  q('att-cards').innerHTML=[
+    `<div class="card" style="background:#ea1100"><div class="val">${RAW.att.length}</div><div class="lbl">Total Exceptions</div></div>`,
+    `<div class="card" style="background:#b91c1c"><div class="val">${RAW.att.filter(r=>r.type==='Absent').length}</div><div class="lbl">Absent</div></div>`,
+    `<div class="card" style="background:#7f1d1d"><div class="val">${RAW.att.filter(r=>r.type==='Absent No Call').length}</div><div class="lbl">No Call</div></div>`,
+    `<div class="card" style="background:#d97706"><div class="val">${RAW.att.filter(r=>r.type==='Late In').length}</div><div class="lbl">Late In</div></div>`,
+  ].join('');
+  const top=attManagers.slice(0,15);
+  new Chart(q('att-chart'),{type:'bar',data:{
+    labels:top.map(m=>m.manager),
+    datasets:[{label:'Exceptions',data:top.map(m=>m.total),backgroundColor:'#ea1100',borderRadius:4}]
+  },options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',
+    plugins:{legend:{display:false}},scales:{x:{beginAtZero:true}}}});
+  renderAttTable();
+}
+
+function sortAtt(col){
+  if(attSort.col===col) attSort.asc=!attSort.asc; else{attSort.col=col;attSort.asc=false;}
+  renderAttTable();
+}
+
+function renderAttTable(){
+  const q2=q('att-search').value.toLowerCase();
+  let rows=attManagers.filter(m=>m.manager.toLowerCase().includes(q2));
+  rows.sort((a,b)=> attSort.col==='manager'
+    ?(attSort.asc?a.manager.localeCompare(b.manager):b.manager.localeCompare(a.manager))
+    :(attSort.asc?a.total-b.total:b.total-a.total));
+  q('att-tbody').innerHTML=rows.map(m=>`
+    <tr onclick="attDrill('${m.manager.replace(/'/g,"\\'")}')">
+      <td><b>${m.manager}</b></td>
+      ${ATT_TYPES.map(t=>`<td>${m.counts[t]||''}</td>`).join('')}
+      <td><b>${m.total}</b></td>
+    </tr>`).join('') || '<tr><td colspan="8" class="empty">No results</td></tr>';
+}
+
+function attDrill(mgr){
+  const recs=RAW.att.filter(r=>r.manager===mgr);
+  const rows=recs.map(r=>`<tr><td>${r.associate}</td><td>${r.type}</td><td>${r.date}</td><td>${r.shift}</td></tr>`).join('');
+  openModal(`Attendance — ${mgr}`,
+    `<table style="width:100%;font-size:.83rem;border-collapse:collapse">
+      <thead><tr>${['Associate','Exception','Date','Shift'].map(h=>`<th style="background:#0053e2;color:#fff;padding:6px 10px;text-align:left">${h}</th>`).join('')}</tr></thead>
+      <tbody>${rows}</tbody></table>`);
+}
+
+// ================================================================
+// CHECK-INS
+// ================================================================
+function chkByManager(){
+  const map={};
+  RAW.chk.forEach(r=>{
+    if(!map[r.manager]) map[r.manager]={manager:r.manager,records:[]};
+    map[r.manager].records.push(r);
+  });
+  return Object.values(map).map(m=>({...m,
+    total:m.records.reduce((s,r)=>s+r.needed,0),
+    assocs:m.records.length
+  })).sort((a,b)=>b.total-a.total);
+}
+
+let chkManagers=[];
+function buildChk(){
+  chkManagers=chkByManager();
+  const totalNeeded=RAW.chk.reduce((s,r)=>s+r.needed,0);
+  q('chk-cards').innerHTML=[
+    `<div class="card" style="background:#0053e2"><div class="val">${RAW.chk.length}</div><div class="lbl">Associates Needing Check-Ins</div></div>`,
+    `<div class="card" style="background:#c2410c"><div class="val">${totalNeeded}</div><div class="lbl">Total Check-Ins Needed</div></div>`,
+  ].join('');
+  const top=chkManagers.slice(0,12);
+  new Chart(q('chk-chart'),{type:'bar',data:{
+    labels:top.map(m=>m.manager),
+    datasets:[{label:'Check-Ins Needed',data:top.map(m=>m.total),backgroundColor:'#0053e2',borderRadius:4}]
+  },options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}});
+  renderChkTable();
+}
+
+function renderChkTable(){
+  const q2=q('chk-search').value.toLowerCase();
+  const rows=chkManagers.filter(m=>m.manager.toLowerCase().includes(q2));
+  q('chk-tbody').innerHTML=rows.map(m=>`
+    <tr onclick="chkDrill('${m.manager.replace(/'/g,"\\'")}')">
+      <td><b>${m.manager}</b></td><td>${m.assocs}</td><td>${m.total}</td>
+    </tr>`).join('') || '<tr><td colspan="3" class="empty">No results</td></tr>';
+}
+
+function chkDrill(mgr){
+  const recs=RAW.chk.filter(r=>r.manager===mgr).sort((a,b)=>b.needed-a.needed);
+  const rows=recs.map(r=>`<tr><td>${r.associate}</td><td>${r.needed}</td></tr>`).join('');
+  openModal(`Check-Ins — ${mgr}`,
+    `<p style="margin-bottom:.8rem;color:#6b7280;font-size:.83rem">${recs.length} associates need check-ins</p>
+    <table style="width:100%;font-size:.83rem;border-collapse:collapse">
+      <thead><tr>${['Associate','Check-Ins Needed'].map(h=>`<th style="background:#0053e2;color:#fff;padding:6px 10px;text-align:left">${h}</th>`).join('')}</tr></thead>
+      <tbody>${rows}</tbody></table>`);
+}
+
+// ================================================================
+// POINTS
+// ================================================================
+function ptsByManager(){
+  const map={};
+  RAW.pts.forEach(r=>{
+    if(!map[r.manager]) map[r.manager]={manager:r.manager,records:[]};
+    map[r.manager].records.push(r);
+  });
+  return Object.values(map).map(m=>({...m,
+    total:m.records.length,
+    maxOcc:Math.max(...m.records.map(r=>r.occ))
+  })).sort((a,b)=>b.total-a.total);
+}
+
+let ptsManagers=[];
+function buildPts(){
+  ptsManagers=ptsByManager();
+  q('pts-cards').innerHTML=[
+    `<div class="card" style="background:#ea1100"><div class="val">${RAW.pts.length}</div><div class="lbl">Associates at 5+ Points</div></div>`,
+  ].join('');
+  const top=ptsManagers.slice(0,12);
+  new Chart(q('pts-chart'),{type:'bar',data:{
+    labels:top.map(m=>m.manager),
+    datasets:[{label:'Associates',data:top.map(m=>m.total),backgroundColor:'#ea1100',borderRadius:4}]
+  },options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}});
+  renderPtsTable();
+}
+
+function renderPtsTable(){
+  const q2=q('pts-search').value.toLowerCase();
+  const rows=ptsManagers.filter(m=>m.manager.toLowerCase().includes(q2)||
+    m.records.some(r=>r.associate.toLowerCase().includes(q2)));
+  q('pts-tbody').innerHTML=rows.map(m=>`
+    <tr onclick="ptsDrill('${m.manager.replace(/'/g,"\\'")}')">
+      <td><b>${m.manager}</b></td><td>${m.total}</td><td>${m.maxOcc.toFixed(1)}</td>
+    </tr>`).join('') || '<tr><td colspan="3" class="empty">No results</td></tr>';
+}
+
+function ptsDrill(mgr){
+  const recs=RAW.pts.filter(r=>r.manager===mgr).sort((a,b)=>b.occ-a.occ);
+  const rows=recs.map(r=>`<tr><td>${r.associate}</td><td>${r.win}</td><td>${r.occ.toFixed(1)}</td><td>${r.shift}</td></tr>`).join('');
+  openModal(`5+ Points — ${mgr}`,
+    `<table style="width:100%;font-size:.83rem;border-collapse:collapse">
+      <thead><tr>${['Associate','WIN','Occurrences','Shift'].map(h=>`<th style="background:#0053e2;color:#fff;padding:6px 10px;text-align:left">${h}</th>`).join('')}</tr></thead>
+      <tbody>${rows}</tbody></table>`);
+}
+
+// ================================================================
+// PTO
+// ================================================================
+function buildPto(){
+  q('pto-cards').innerHTML=[
+    `<div class="card" style="background:#0053e2"><div class="val">${RAW.pto.length}</div><div class="lbl">Pending PTO Requests</div></div>`,
+  ].join('');
+  const shiftCounts={};
+  RAW.pto.forEach(r=>{shiftCounts[r.shift]=(shiftCounts[r.shift]||0)+1;});
+  const shifts=Object.entries(shiftCounts).sort((a,b)=>b[1]-a[1]);
+  new Chart(q('pto-chart'),{type:'doughnut',data:{
+    labels:shifts.map(s=>s[0]),
+    datasets:[{data:shifts.map(s=>s[1]),backgroundColor:CHART_PALETTE}]
+  },options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right'}}}});
+  renderPtoTable();
+}
+
+function renderPtoTable(){
+  const q2=q('pto-search').value.toLowerCase();
+  const rows=RAW.pto.filter(r=>r.manager.toLowerCase().includes(q2)||r.associate.toLowerCase().includes(q2));
+  q('pto-tbody').innerHTML=rows.map(r=>`
+    <tr><td>${r.associate}</td><td>${r.manager}</td><td>${r.submitted}</td>
+        <td>${r.requested}</td><td>${r.time}</td><td>${r.shift}</td></tr>`
+  ).join('') || '<tr><td colspan="6" class="empty">No results</td></tr>';
+}
+
+// ================================================================
+// INIT
+// ================================================================
+buildOverview();
+buildCbl();
+buildAtt();
+buildChk();
+buildPts();
+buildPto();
+</script>
+</body>
+</html>
