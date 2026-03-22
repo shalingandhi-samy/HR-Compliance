@@ -16,8 +16,8 @@
   <span class="flex items-center gap-1.5 text-xs font-semibold text-[#2a8703]"><span class="w-3 h-3 rounded-full bg-[#2a8703] inline-block"></span>PTO Pending</span>
 </div>
 
-<!-- Search Bar -->
-<div class="mb-4">
+<!-- Search Bar + Export -->
+<div class="mb-4 flex flex-wrap items-center gap-3">
   <input
     id="manager-search"
     type="text"
@@ -25,10 +25,14 @@
     class="w-full sm:w-80 px-4 py-2 rounded-xl border-2 border-gray-200 focus:border-[#0053e2] focus:outline-none text-sm transition"
     oninput="filterManagers(this.value)"
   />
+  <button onclick="exportTableToCSV('scorecard-table', 'manager-scorecard.csv')"
+    class="no-print flex items-center gap-2 bg-[#0053e2] hover:bg-blue-700 text-white text-sm font-bold px-4 py-2 rounded-xl transition">
+    &#11015;&#65039; Export CSV
+  </button>
 </div>
 
 <div class="overflow-x-auto rounded-2xl shadow border border-gray-100">
-  <table class="w-full text-sm sortable-table">
+  <table id="scorecard-table" class="w-full text-sm sortable-table">
     <thead class="bg-[#041f41] text-white">
       <tr>
         <th class="px-4 py-3 text-left font-semibold">Manager</th>

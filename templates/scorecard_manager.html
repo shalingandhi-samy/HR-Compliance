@@ -3,8 +3,12 @@
 {% block content %}
 
 <!-- Header -->
-<div class="mb-6 flex items-center gap-4">
-  <a href="/scorecard" class="text-[#0053e2] hover:underline text-sm">&larr; All Managers</a>
+<div class="mb-6 flex items-center justify-between">
+  <a href="/scorecard" class="text-[#0053e2] hover:underline text-sm no-print">&larr; All Managers</a>
+  <button onclick="window.print()"
+    class="no-print flex items-center gap-2 bg-[#041f41] hover:bg-gray-800 text-white text-sm font-bold px-4 py-2 rounded-xl transition">
+    &#128438; Print Scorecard
+  </button>
 </div>
 <div class="mb-8">
   <h1 class="text-3xl font-bold text-[#041f41] mb-1">&#127942; {{ data.manager }}</h1>

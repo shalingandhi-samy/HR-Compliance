@@ -30,6 +30,12 @@
     .sortable-table thead th:hover { opacity: 0.82; }
     .sortable-table thead th.sort-asc::after  { content: ' ↑'; font-size: 0.7rem; }
     .sortable-table thead th.sort-desc::after { content: ' ↓'; font-size: 0.7rem; }
+    @media print {
+      nav, .tab-nav, footer, .no-print { display: none !important; }
+      body { background: white !important; }
+      .shadow, .shadow-lg, .shadow-md { box-shadow: none !important; }
+      a { text-decoration: none !important; color: inherit !important; }
+    }
   </style>
 </head>
 <body class="bg-gray-50 min-h-screen">
@@ -48,7 +54,7 @@
   </nav>
 
   <!-- Tab Nav -->
-  <div class="bg-[#041f41] border-b border-white/10">
+  <div class="tab-nav bg-[#041f41] border-b border-white/10">
     <div class="max-w-7xl mx-auto px-4 flex gap-1">
       <a href="/cbls" class="px-5 py-3 text-sm font-semibold text-white/70 hover:text-white hover:bg-white/10 transition rounded-t-md
         {% if request.url.path == '/cbls' or '/cbls/manager/' in request.url.path %}bg-white/10 text-white border-b-2 border-[#ffc220]{% endif %}">
@@ -86,6 +92,28 @@
   </footer>
 
 <script>
+function exportTableToCSV(tableId, filename) {
+  var table = document.getElementById(tableId);
+  if (!table) return;
+  var rows = [];
+  var headers = Array.from(table.querySelectorAll('thead th')).map(function (th) {
+    return '"' + th.textContent.trim().replace(/[\u2191\u2193]/g, '').trim().replace(/"/g, '""') + '"';
+  });
+  rows.push(headers.join(','));
+  table.querySelectorAll('tbody tr').forEach(function (row) {
+    if (row.style.display === 'none') return;
+    var cells = Array.from(row.querySelectorAll('td')).map(function (td) {
+      return '"' + td.textContent.trim().replace(/"/g, '""') + '"';
+    });
+    rows.push(cells.join(','));
+  });
+  var blob = new Blob([rows.join('\n')], { type: 'text/csv' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+}
+
 document.addEventListener('DOMContentLoaded', function () {
   document.querySelectorAll('table.sortable-table').forEach(function (table) {
     var headers = Array.from(table.querySelectorAll('thead th'));

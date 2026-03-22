@@ -36,10 +36,16 @@
 <section class="mb-12">
   <div class="flex items-center justify-between mb-4">
     <h2 class="text-xl font-bold text-[#041f41]">&#128100; Check Ins by Manager</h2>
-    <span class="text-sm text-gray-400">Click a manager to view associates</span>
+    <div class="flex items-center gap-3">
+      <span class="text-sm text-gray-400">Click a manager to view associates</span>
+      <button onclick="exportTableToCSV('checkins-manager-table', 'checkins-by-manager.csv')"
+        class="no-print flex items-center gap-1 bg-[#0053e2] hover:bg-blue-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition">
+        &#11015;&#65039; Export CSV
+      </button>
+    </div>
   </div>
   <div class="overflow-x-auto rounded-2xl shadow border border-gray-100">
-    <table class="w-full text-sm sortable-table">
+    <table id="checkins-manager-table" class="w-full text-sm sortable-table">
       <thead class="bg-[#0053e2] text-white">
         <tr>
           <th class="px-4 py-3 text-left font-semibold">Manager</th>
