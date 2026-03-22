@@ -1,15 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Manager Scorecard - PHL5<script>
-function filterManagers(query) {
-  const q = query.toLowerCase().trim();
-  document.querySelectorAll('tbody tr').forEach(row => {
-    const name = row.querySelector('td')?.textContent.toLowerCase() ?? '';
-    row.style.display = name.includes(q) ? '' : 'none';
-  });
-}
-</script>
-
-{% endblock %}
+{% block title %}Manager Scorecard - PHL5{% endblock %}
 {% block content %}
 
 <div class="mb-8">
@@ -51,7 +41,7 @@ function filterManagers(query) {
         <th class="px-4 py-3 text-center font-semibold"></th>
       </tr>
     </thead>
-    <tbody class="divide-y divide-gray-100">
+    <tbody id="manager-tbody" class="divide-y divide-gray-100">
       {% for row in summary.rows %}
       <tr class="hover:bg-blue-50 transition cursor-pointer group"
           onclick="window.location='/scorecard/manager/{{ row.manager | urlencode }}'">
@@ -113,5 +103,15 @@ function filterManagers(query) {
     </tbody>
   </table>
 </div>
+
+<script>
+function filterManagers(query) {
+  const q = query.toLowerCase().trim();
+  document.querySelectorAll('#manager-tbody tr').forEach(row => {
+    const name = row.querySelector('td')?.textContent.toLowerCase() ?? '';
+    row.style.display = name.includes(q) ? '' : 'none';
+  });
+}
+</script>
 
 {% endblock %}
