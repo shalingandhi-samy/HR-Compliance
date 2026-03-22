@@ -39,6 +39,7 @@ from file_watcher import start_file_watcher
 from scorecard_data import get_scorecard_summary, get_manager_scorecard
 from associate_lookup import search_associate
 from history_db import init_db, save_snapshot, get_snapshots
+from notes_db import init_notes_table, get_notes_for_wins, save_note
 from alerts import check_and_send_alerts
 from shifts_data import get_shift_breakdown
 from email_scorecards import send_all_scorecards, get_manager_email, _render_scorecard_email, _load_config, send_email
@@ -120,6 +121,7 @@ async def startup_event():
     global _last_refreshed
     _last_refreshed = datetime.now()
     init_db()
+    init_notes_table()
     _save_snapshot_now()
     logger.info("All data loaded and ready!")
     start_file_watcher(scheduled_refresh)
@@ -262,11 +264,22 @@ async def points_manager(request: Request, manager_name: str):
     manager = unquote(manager_name)
     records = load_points()
     data = get_points_manager_detail(records, manager)
+    wins = [str(r.win) for r in data["records"]]
+    notes = get_notes_for_wins(wins)
     return templates.TemplateResponse("points_manager.html", {
         "request": request,
         "data": data,
+        "notes": notes,
         "quote": quote,
     })
+
+
+@app.post("/api/notes/{win}")
+async def upsert_note(win: str, request: Request):
+    form = await request.form()
+    note_text = form.get("note", "")
+    save_note(win, note_text)
+    return HTMLResponse(f'<span class="text-green-600 text-xs">✓ Saved</span>')
 
 
 @app.get("/pto", response_class=HTMLResponse)

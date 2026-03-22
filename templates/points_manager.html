@@ -21,6 +21,7 @@
         <th class="px-6 py-3 text-left font-semibold">WIN</th>
         <th class="px-6 py-3 text-left font-semibold">Shift</th>
         <th class="px-6 py-3 text-center font-semibold">Occurrences</th>
+        <th class="px-6 py-3 text-left font-semibold">Notes</th>
         <th class="px-6 py-3 text-center font-semibold">Status</th>
       </tr>
     </thead>
@@ -32,6 +33,22 @@
         <td class="px-6 py-4 text-gray-600 text-xs">{{ rec.shift }}</td>
         <td class="px-6 py-4 text-center">
           <span class="text-3xl font-black text-[#7f1d1d]">{{ rec.occurrences }}</span>
+        </td>
+        <td class="px-6 py-4">
+          <div class="flex items-center gap-2">
+            <form hx-post="/api/notes/{{ rec.win }}"
+                  hx-trigger="change delay:600ms"
+                  hx-target="#note-status-{{ rec.win }}"
+                  hx-swap="innerHTML"
+                  class="flex items-center gap-2 w-full">
+              <textarea name="note"
+                rows="1"
+                placeholder="Add a note..."
+                class="w-full text-xs border border-gray-200 rounded-lg px-2 py-1 resize-none focus:outline-none focus:ring-2 focus:ring-[#0053e2] text-gray-700"
+                oninput="this.rows = Math.max(1, this.value.split('\n').length)">{{ notes.get(rec.win | string, '') }}</textarea>
+            </form>
+            <span id="note-status-{{ rec.win }}" class="text-xs text-gray-400 whitespace-nowrap"></span>
+          </div>
         </td>
         <td class="px-6 py-4 text-center">
           <span class="inline-block px-3 py-1 rounded-full text-xs font-bold text-white bg-[#7f1d1d]">At Risk</span>
