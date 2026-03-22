@@ -296,6 +296,28 @@ async def pto_manager(request: Request, manager_name: str):
     })
 
 
+@app.get("/leaderboard", response_class=HTMLResponse)
+async def leaderboard(request: Request):
+    cbl = load_data()
+    att = load_attendance()
+    chk = load_checkins()
+    pts = load_points()
+    pto = load_pto()
+    summary = get_scorecard_summary(cbl, att, chk, pts, pto)
+    rows = summary["rows"]
+    # Score: 100 = perfect, 0 = worst. Normalize by highest issue total.
+    worst = max((r["issue_total"] for r in rows), default=1) or 1
+    for i, r in enumerate(sorted(rows, key=lambda x: x["issue_total"])):
+        r["score"] = round((1 - r["issue_total"] / worst) * 100)
+        r["rank"] = i + 1
+    ranked = sorted(rows, key=lambda r: r["rank"])
+    return templates.TemplateResponse("leaderboard.html", {
+        "request": request,
+        "rows": ranked,
+        "worst": worst,
+    })
+
+
 @app.get("/api/last-refreshed", response_class=HTMLResponse)
 async def last_refreshed():
     """Returns a small HTML snippet showing the last refresh time."""

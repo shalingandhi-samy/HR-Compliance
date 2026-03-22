@@ -51,7 +51,7 @@
         {% if assoc.attendance %}<span class="badge" style="background:#3d2000;color:#fcd34d;border-color:#ffc220;">&#128197; {{ assoc.attendance|length }} Att</span>{% endif %}
         {% if assoc.checkins %}<span class="badge" style="background:#3d0000;color:#fca5a5;border-color:#ea1100;">&#9989; {{ assoc.checkins|length }} Chk</span>{% endif %}
         {% if assoc.points %}<span class="badge" style="background:#2d0a0a;color:#fca5a5;border-color:#7f1d1d;">&#9888;&#65039; {{ assoc.points[0].occurrences }} pts</span>{% endif %}
-        {% if assoc.pto %}<span class="badge" style="background:#052e0a;color:#86efac;border-color:#2a8703;">&#128203; {{ assoc.pto|length }} PTO</span>{% endif %}
+        {% if assoc.pto %}<span class="badge" style="background:#052e0a;color:#86efac;border-color:#2a8703;">&#128203; {{ assoc.pto|length }} Time Off</span>{% endif %}
       </div>
     </div>
 
@@ -131,7 +131,7 @@
       <!-- PTO -->
       {% if assoc.pto %}
       <div class="px-6 py-4">
-        <h3 class="text-sm font-bold text-[#2a8703] mb-3">&#128203; Pending PTO</h3>
+        <h3 class="text-sm font-bold text-[#2a8703] mb-3">&#128203; Pending Time Off Requests</h3>
         <div class="flex flex-wrap gap-2">
           {% for r in assoc.pto %}
           <span class="text-xs bg-green-50 border border-green-200 text-green-800 rounded-lg px-3 py-1">

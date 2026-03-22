@@ -24,7 +24,7 @@
     ('Att. Exceptions',  last.att, first.att, '#995213', 'bg-yellow-50'),
     ('Check-Ins Needed', last.chk, first.chk, '#ea1100', 'bg-red-50'),
     ('Points 5+',        last.pts, first.pts, '#7f1d1d', 'bg-red-50'),
-    ('PTO Pending',      last.pto, first.pto, '#2a8703', 'bg-green-50'),
+    ('Time Off Requests', last.pto, first.pto, '#2a8703', 'bg-green-50'),
   ] %}
   {% for label, curr, start_val, color, bg in metrics %}
   {% set delta = curr - start_val %}
@@ -57,7 +57,7 @@
         <th class="px-4 py-3 text-center font-semibold">&#128197; Attendance</th>
         <th class="px-4 py-3 text-center font-semibold">&#9989; Check-Ins</th>
         <th class="px-4 py-3 text-center font-semibold">&#9888;&#65039; Points 5+</th>
-        <th class="px-4 py-3 text-center font-semibold">&#128203; PTO</th>
+        <th class="px-4 py-3 text-center font-semibold">&#128203; Time Off</th>
       </tr>
     </thead>
     <tbody class="divide-y divide-gray-100">
@@ -88,7 +88,7 @@ new Chart(document.getElementById('trendsChart'), {
       { label: 'Att. Exceptions',  data: data.map(function(d){return d.att;}), borderColor:'#ffc220', backgroundColor:'rgba(255,194,32,0.08)', tension:0.3, fill:true, pointRadius:3 },
       { label: 'Check-Ins Needed', data: data.map(function(d){return d.chk;}), borderColor:'#ea1100', backgroundColor:'rgba(234,17,0,0.08)', tension:0.3, fill:true, pointRadius:3 },
       { label: 'Points 5+',        data: data.map(function(d){return d.pts;}), borderColor:'#7f1d1d', backgroundColor:'rgba(127,29,29,0.08)', tension:0.3, fill:true, pointRadius:3 },
-      { label: 'PTO Pending',      data: data.map(function(d){return d.pto;}), borderColor:'#2a8703', backgroundColor:'rgba(42,135,3,0.08)', tension:0.3, fill:true, pointRadius:3 },
+      { label: 'Time Off Requests', data: data.map(function(d){return d.pto;}), borderColor:'#2a8703', backgroundColor:'rgba(42,135,3,0.08)', tension:0.3, fill:true, pointRadius:3 },
     ]
   },
   options: {

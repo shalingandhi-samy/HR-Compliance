@@ -64,59 +64,63 @@
   <!-- Nav -->
   <nav class="bg-[#0053e2] shadow-md no-print">
     <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-      <div class="flex items-center gap-3">
-        <span class="text-white font-bold text-lg tracking-wide">PHL5 COMPLIANCE DASHBOARD</span>
-      </div>
       <div class="flex items-center gap-4">
-        <span class="text-white/60 text-xs"
-          hx-get="/api/last-refreshed"
-          hx-trigger="load, every 60s"
-          hx-swap="innerHTML">
-          &#128260; Loading...
-        </span>
-        <a href="/" class="text-white/80 hover:text-white text-sm transition">&#8962; Home</a>
-        <button id="dark-toggle" onclick="toggleDark()"
-          class="text-white/80 hover:text-white text-lg transition" title="Toggle dark mode">
-          &#127769;
-        </button>
+        <a href="/" class="text-white/80 hover:text-white text-xl transition">&#127968;</a>
       </div>
+      <span class="fixed top-3 left-4 z-50 text-white font-bold text-lg tracking-wide no-print">PHL5 COMPLIANCE DASHBOARD</span>
     </div>
   </nav>
 
-  <!-- Tab Nav -->
-  <div class="tab-nav bg-[#041f41] border-b border-white/10">
-    <div class="max-w-7xl mx-auto px-4 flex gap-1">
-      <a href="/cbls" class="px-5 py-3 text-sm font-semibold text-white/70 hover:text-white hover:bg-white/10 transition rounded-t-md
+  <!-- Fixed top-right: last refreshed + dark mode toggle -->
+  <div class="no-print fixed top-3 right-4 z-50 flex items-center gap-3">
+    <span class="text-white/80 text-xs"
+      hx-get="/api/last-refreshed"
+      hx-trigger="load, every 60s"
+      hx-swap="innerHTML">
+      &#128260; Loading...
+    </span>
+    <button id="dark-toggle" onclick="toggleDark()"
+      class="text-2xl leading-none hover:scale-110 transition-transform"
+      title="Toggle dark mode">🌙</button>
+  </div>
+
+  <div class="tab-nav bg-[#041f41] border-b border-white/10 overflow-x-auto">
+    <div class="flex gap-1 whitespace-nowrap justify-center">
+      <a href="/cbls" class="px-4 py-3 text-sm font-semibold text-white/70 hover:text-white hover:bg-white/10 transition rounded-t-md
         {% if request.url.path == '/cbls' or '/cbls/manager/' in request.url.path %}bg-white/10 text-white border-b-2 border-[#ffc220]{% endif %}">
         &#128218; CBL Compliance
       </a>
-      <a href="/attendance" class="px-5 py-3 text-sm font-semibold text-white/70 hover:text-white hover:bg-white/10 transition rounded-t-md
+      <a href="/attendance" class="px-4 py-3 text-sm font-semibold text-white/70 hover:text-white hover:bg-white/10 transition rounded-t-md
         {% if '/attendance' in request.url.path %}bg-white/10 text-white border-b-2 border-[#ffc220]{% endif %}">
         &#128197; Attendance Exceptions
       </a>
-      <a href="/checkins" class="px-5 py-3 text-sm font-semibold text-white/70 hover:text-white hover:bg-white/10 transition rounded-t-md
+      <a href="/checkins" class="px-4 py-3 text-sm font-semibold text-white/70 hover:text-white hover:bg-white/10 transition rounded-t-md
         {% if '/checkins' in request.url.path %}bg-white/10 text-white border-b-2 border-[#ffc220]{% endif %}">
         &#9989; Manager Check Ins
       </a>
-      <a href="/points" class="px-5 py-3 text-sm font-semibold text-white/70 hover:text-white hover:bg-white/10 transition rounded-t-md
+      <a href="/points" class="px-4 py-3 text-sm font-semibold text-white/70 hover:text-white hover:bg-white/10 transition rounded-t-md
         {% if '/points' in request.url.path %}bg-white/10 text-white border-b-2 border-[#ffc220]{% endif %}">
         &#9888;&#65039; Attendance Points 5+
       </a>
-      <a href="/pto" class="px-5 py-3 text-sm font-semibold text-white/70 hover:text-white hover:bg-white/10 transition rounded-t-md
+      <a href="/pto" class="px-4 py-3 text-sm font-semibold text-white/70 hover:text-white hover:bg-white/10 transition rounded-t-md
         {% if '/pto' in request.url.path %}bg-white/10 text-white border-b-2 border-[#ffc220]{% endif %}">
-        &#128197; Time Off Requests
+        &#128203; Time Off Requests
       </a>
-      <a href="/scorecard" class="px-5 py-3 text-sm font-semibold text-white/70 hover:text-white hover:bg-white/10 transition rounded-t-md
+      <a href="/scorecard" class="px-4 py-3 text-sm font-semibold text-white/70 hover:text-white hover:bg-white/10 transition rounded-t-md
         {% if '/scorecard' in request.url.path %}bg-white/10 text-white border-b-2 border-[#ffc220]{% endif %}">
         &#127942; Manager Scorecard
       </a>
-      <a href="/lookup" class="px-5 py-3 text-sm font-semibold text-white/70 hover:text-white hover:bg-white/10 transition rounded-t-md
+      <a href="/lookup" class="px-4 py-3 text-sm font-semibold text-white/70 hover:text-white hover:bg-white/10 transition rounded-t-md
         {% if '/lookup' in request.url.path %}bg-white/10 text-white border-b-2 border-[#ffc220]{% endif %}">
         &#128269; Associate Lookup
       </a>
-      <a href="/trends" class="px-5 py-3 text-sm font-semibold text-white/70 hover:text-white hover:bg-white/10 transition rounded-t-md
+      <a href="/trends" class="px-4 py-3 text-sm font-semibold text-white/70 hover:text-white hover:bg-white/10 transition rounded-t-md
         {% if '/trends' in request.url.path %}bg-white/10 text-white border-b-2 border-[#ffc220]{% endif %}">
         &#128202; Trends
+      </a>
+      <a href="/leaderboard" class="px-4 py-3 text-sm font-semibold text-white/70 hover:text-white hover:bg-white/10 transition rounded-t-md
+        {% if '/leaderboard' in request.url.path %}bg-white/10 text-white border-b-2 border-[#ffc220]{% endif %}">
+        &#127942; Leaderboard
       </a>
     </div>
   </div>
@@ -135,14 +139,14 @@ function toggleDark() {
   var html = document.getElementById('html-root');
   var isDark = html.classList.toggle('dark');
   localStorage.setItem('darkMode', isDark ? '1' : '0');
-  document.getElementById('dark-toggle').textContent = isDark ? '\u2600\ufe0f' : '\U0001f319';
+  document.getElementById('dark-toggle').textContent = isDark ? '☀️' : '🌙';
 }
 (function () {
   if (localStorage.getItem('darkMode') === '1') {
     document.getElementById('html-root').classList.add('dark');
     document.addEventListener('DOMContentLoaded', function () {
       var btn = document.getElementById('dark-toggle');
-      if (btn) btn.textContent = '\u2600\ufe0f';
+      if (btn) btn.textContent = '☀️';
     });
   }
 })();
