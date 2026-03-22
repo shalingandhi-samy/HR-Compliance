@@ -37,15 +37,21 @@
         <td class="px-6 py-4">
           <div class="flex items-center gap-2">
             <form hx-post="/api/notes/{{ rec.win }}"
-                  hx-trigger="change delay:600ms"
+                  hx-trigger="click from:#save-btn-{{ rec.win }}"
                   hx-target="#note-status-{{ rec.win }}"
                   hx-swap="innerHTML"
+                  hx-confirm="Save this note for {{ rec.associate }}?"
                   class="flex items-center gap-2 w-full">
               <textarea name="note"
                 rows="1"
                 placeholder="Add a note..."
                 class="w-full text-xs border border-gray-200 rounded-lg px-2 py-1 resize-none focus:outline-none focus:ring-2 focus:ring-[#0053e2] text-gray-700"
                 oninput="this.rows = Math.max(1, this.value.split('\n').length)">{{ notes.get(rec.win | string, '') }}</textarea>
+              <button id="save-btn-{{ rec.win }}"
+                type="button"
+                class="shrink-0 px-3 py-1 text-xs font-bold text-white bg-[#0053e2] hover:bg-[#0043b5] rounded-lg transition whitespace-nowrap">
+                💾 Save
+              </button>
             </form>
             <span id="note-status-{{ rec.win }}" class="text-xs text-gray-400 whitespace-nowrap"></span>
           </div>
