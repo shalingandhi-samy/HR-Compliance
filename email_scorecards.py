@@ -1,11 +1,8 @@
-"""Email manager scorecards via Walmart internal SMTP relay.
-
-Email addresses are derived from manager names (first.last@wal-mart.com)
-with optional overrides in manager_emails.cfg.
+"""Email manager scorecards — sends via Outlook COM (Windows) with SMTP fallback.
 
 Usage:
     uv run python email_scorecards.py           # send all
-    uv run python email_scorecards.py --dry-run  # preview only, no send
+    uv run python email_scorecards.py --dry-run  # preview only
 """
 from __future__ import annotations
 
@@ -47,29 +44,72 @@ def _derive_email(name: str) -> str:
 
 
 def get_manager_email(name: str, cfg: configparser.ConfigParser) -> str:
-    """Return configured override or auto-derived email."""
     override = cfg.get("emails", name, fallback="")
     return override.strip() if override.strip() else _derive_email(name)
 
 
+def _send_via_outlook(to_email: str, subject: str, html_body: str) -> None:
+    """Send via local Outlook COM — uses your already-logged-in Outlook session."""
+    try:
+        import win32com.client as win32  # type: ignore
+    except ImportError:
+        raise RuntimeError("pywin32 not installed")
+    try:
+        outlook = win32.Dispatch("outlook.application")
+        mail = outlook.CreateItem(0)
+        mail.To = to_email
+        mail.Subject = subject
+        mail.HTMLBody = html_body
+        mail.Send()
+        logger.info(f"Sent via Outlook COM -> {to_email}")
+    except Exception as exc:
+        raise RuntimeError(f"Outlook COM error: {exc}") from exc
+
+
+def _send_via_smtp(to_email: str, subject: str, html_body: str, cfg: configparser.ConfigParser) -> None:
+    """Fallback: send via configured SMTP relay."""
+    smtp_host = cfg.get("settings", "smtp_host", fallback="smtp.office365.com")
+    smtp_port = int(cfg.get("settings", "smtp_port", fallback="587"))
+    from_addr = cfg.get("settings", "from_address", fallback="")
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = subject
+    msg["From"]    = from_addr
+    msg["To"]      = to_email
+    msg.attach(MIMEText(html_body, "html"))
+    with smtplib.SMTP(smtp_host, smtp_port, timeout=15) as server:
+        server.starttls()
+        server.sendmail(from_addr, [to_email], msg.as_string())
+    logger.info(f"Sent via SMTP -> {to_email}")
+
+
+def send_email(to_email: str, subject: str, html_body: str) -> None:
+    """Try Outlook COM first, fall back to SMTP."""
+    cfg = _load_config()
+    try:
+        _send_via_outlook(to_email, subject, html_body)
+    except RuntimeError as exc:
+        logger.warning(f"Outlook COM unavailable ({exc}), trying SMTP...")
+        _send_via_smtp(to_email, subject, html_body, cfg)
+
+
 def _render_scorecard_email(manager: str, data: dict) -> str:
     """Generate a clean HTML email body for one manager's scorecard."""
-    now = datetime.now().strftime("%B %d, %Y")
-    cbl   = data["cbl"]
-    att   = data["attendance"]
-    chk   = data["checkins"]
-    pts   = data["points"]
-    pto   = data["pto"]
+    now  = datetime.now().strftime("%B %d, %Y")
+    cbl  = data["cbl"]
+    att  = data["attendance"]
+    chk  = data["checkins"]
+    pts  = data["points"]
+    pto  = data["pto"]
 
     def metric_row(label: str, value: int, color: str) -> str:
-        flag = "&#9888;" if value > 0 else "&#10003;"
+        flag  = "&#9888;" if value > 0 else "&#10003;"
         style = f"color:{color};font-weight:bold" if value > 0 else "color:#2a8703"
         return (
             f'<tr><td style="padding:8px 16px;border-bottom:1px solid #f0f0f0">{label}</td>'
             f'<td style="padding:8px 16px;border-bottom:1px solid #f0f0f0;text-align:center;{style}">{flag} {value}</td></tr>'
         )
 
-    total = cbl["total"] + att["total"] + chk["total"] + pts["total"]
+    total        = cbl["total"] + att["total"] + chk["total"] + pts["total"]
     banner_color = "#2a8703" if total == 0 else "#ea1100" if total > 10 else "#995213"
     status_msg   = "All Clear! &#127881;" if total == 0 else f"{total} Open Items Require Attention"
 
@@ -79,11 +119,9 @@ def _render_scorecard_email(manager: str, data: dict) -> str:
         <div style="color:white;font-size:22px;font-weight:900;letter-spacing:1px">PHL5 COMPLIANCE</div>
         <div style="color:rgba(255,255,255,0.8);font-size:13px;margin-top:4px">Manager Scorecard &mdash; {now}</div>
       </div>
-
       <div style="background:{banner_color};padding:14px 32px;color:white;font-weight:bold;font-size:15px">
         {manager} &mdash; {status_msg}
       </div>
-
       <div style="background:white;padding:24px 32px">
         <table style="width:100%;border-collapse:collapse;font-size:14px">
           <thead>
@@ -101,11 +139,9 @@ def _render_scorecard_email(manager: str, data: dict) -> str:
           </tbody>
         </table>
       </div>
-
       <div style="background:#f0f4ff;padding:16px 32px;border-top:3px solid #0053e2">
         <p style="font-size:12px;color:#555;margin:0">
-          This scorecard is auto-generated by the PHL5 Compliance Dashboard.
-          Please do not reply to this email.
+          Auto-generated by the PHL5 Compliance Dashboard. Do not reply.
         </p>
       </div>
     </div>
@@ -113,49 +149,31 @@ def _render_scorecard_email(manager: str, data: dict) -> str:
 
 
 def send_all_scorecards(dry_run: bool = False) -> dict:
-    """Send HTML scorecard emails to all managers. Returns a result summary."""
-    cfg = _load_config()
-    smtp_host   = cfg.get("settings", "smtp_host",    fallback="smtpout.wal-mart.com")
-    smtp_port   = int(cfg.get("settings", "smtp_port", fallback="25"))
-    from_addr   = cfg.get("settings", "from_address", fallback="phl5-compliance@wal-mart.com")
-    reply_to    = cfg.get("settings", "reply_to",     fallback="")
-
-    cbl = load_data()
-    att = load_attendance()
-    chk = load_checkins()
-    pts = load_points()
-    pto = load_pto()
-
-    summary = get_scorecard_summary(cbl, att, chk, pts, pto)
+    """Send scorecard emails to all managers."""
+    cfg      = _load_config()
+    cbl      = load_data()
+    att      = load_attendance()
+    chk      = load_checkins()
+    pts      = load_points()
+    pto      = load_pto()
+    summary  = get_scorecard_summary(cbl, att, chk, pts, pto)
     managers = [r["manager"] for r in summary["rows"]]
 
     sent, failed, skipped = [], [], []
-
     for manager in managers:
-        email = get_manager_email(manager, cfg)
-        data  = get_manager_scorecard(manager, cbl, att, chk, pts, pto)
-        html  = _render_scorecard_email(manager, data)
-
+        email   = get_manager_email(manager, cfg)
+        data    = get_manager_scorecard(manager, cbl, att, chk, pts, pto)
+        html    = _render_scorecard_email(manager, data)
+        subject = f"PHL5 Compliance Scorecard \u2014 {manager} \u2014 {datetime.now().strftime('%b %d, %Y')}"
         if dry_run:
             logger.info(f"[DRY RUN] Would email {manager} -> {email}")
             skipped.append({"manager": manager, "email": email})
             continue
-
-        msg = MIMEMultipart("alternative")
-        msg["Subject"] = f"PHL5 Compliance Scorecard — {manager} — {datetime.now().strftime('%b %d, %Y')}"
-        msg["From"]    = from_addr
-        msg["To"]      = email
-        if reply_to:
-            msg["Reply-To"] = reply_to
-        msg.attach(MIMEText(html, "html"))
-
         try:
-            with smtplib.SMTP(smtp_host, smtp_port, timeout=15) as server:
-                server.sendmail(from_addr, [email], msg.as_string())
-            logger.info(f"Sent scorecard to {manager} <{email}>")
+            send_email(email, subject, html)
             sent.append({"manager": manager, "email": email})
         except Exception as exc:
-            logger.warning(f"Failed to email {manager} <{email}>: {exc}")
+            logger.warning(f"Failed to email {manager}: {exc}")
             failed.append({"manager": manager, "email": email, "error": str(exc)})
 
     return {"sent": sent, "failed": failed, "skipped": skipped, "dry_run": dry_run}
@@ -163,6 +181,6 @@ def send_all_scorecards(dry_run: bool = False) -> dict:
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    dry = "--dry-run" in sys.argv
+    dry    = "--dry-run" in sys.argv
     result = send_all_scorecards(dry_run=dry)
     print(f"\nSent: {len(result['sent'])} | Failed: {len(result['failed'])} | Skipped: {len(result['skipped'])}")

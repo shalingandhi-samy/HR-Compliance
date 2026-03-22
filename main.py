@@ -41,11 +41,7 @@ from associate_lookup import search_associate
 from history_db import init_db, save_snapshot, get_snapshots
 from alerts import check_and_send_alerts
 from shifts_data import get_shift_breakdown
-from email_scorecards import send_all_scorecards, get_manager_email, _render_scorecard_email, _load_config
-import smtplib
-import configparser
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText as _MIMEText
+from email_scorecards import send_all_scorecards, get_manager_email, _render_scorecard_email, _load_config, send_email
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -332,23 +328,11 @@ async def send_single_scorecard(manager_name: str, request: Request):
     chk = load_checkins()
     pts = load_points()
     pto = load_pto()
-    data = get_manager_scorecard(manager, cbl, att, chk, pts, pto)
-    html = _render_scorecard_email(manager, data)
-
-    cfg = _load_config()
-    smtp_host = cfg.get("settings", "smtp_host", fallback="smtpout.wal-mart.com")
-    smtp_port = int(cfg.get("settings", "smtp_port", fallback="25"))
-    from_addr = cfg.get("settings", "from_address", fallback="phl5-compliance@wal-mart.com")
-
-    msg = MIMEMultipart("alternative")
-    msg["Subject"] = f"PHL5 Compliance Scorecard \u2014 {manager} \u2014 {datetime.now().strftime('%b %d, %Y')}"
-    msg["From"]    = from_addr
-    msg["To"]      = email
-    msg.attach(_MIMEText(html, "html"))
-
+    data    = get_manager_scorecard(manager, cbl, att, chk, pts, pto)
+    html    = _render_scorecard_email(manager, data)
+    subject = f"PHL5 Compliance Scorecard \u2014 {manager} \u2014 {datetime.now().strftime('%b %d, %Y')}"
     try:
-        with smtplib.SMTP(smtp_host, smtp_port, timeout=15) as server:
-            server.sendmail(from_addr, [email], msg.as_string())
+        send_email(email, subject, html)
         logger.info(f"Scorecard emailed for {manager} -> {email}")
         return JSONResponse({"ok": True})
     except Exception as exc:
