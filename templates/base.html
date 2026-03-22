@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" id="html-root">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -36,19 +36,49 @@
       .shadow, .shadow-lg, .shadow-md { box-shadow: none !important; }
       a { text-decoration: none !important; color: inherit !important; }
     }
+    /* Dark mode */
+    .dark body        { background-color: #0f172a !important; color: #e2e8f0 !important; }
+    .dark nav         { background-color: #020617 !important; }
+    .dark .tab-nav    { background-color: #0f172a !important; border-color: #1e293b !important; }
+    .dark main        { background-color: #0f172a !important; }
+    .dark footer      { color: #475569 !important; }
+    .dark .bg-white   { background-color: #1e293b !important; }
+    .dark .bg-gray-50 { background-color: #0f172a !important; }
+    .dark .bg-gray-100{ background-color: #1e293b !important; }
+    .dark .border-gray-100 { border-color: #334155 !important; }
+    .dark .text-gray-500   { color: #94a3b8 !important; }
+    .dark .text-gray-400   { color: #64748b !important; }
+    .dark .text-gray-700   { color: #cbd5e1 !important; }
+    .dark .text-gray-800   { color: #e2e8f0 !important; }
+    .dark .text-\[\#041f41\] { color: #93c5fd !important; }
+    .dark .divide-gray-100 > * { border-color: #334155 !important; }
+    .dark .hover\:bg-blue-50:hover  { background-color: #1e3a5f !important; }
+    .dark .hover\:bg-gray-50:hover  { background-color: #1e293b !important; }
+    .dark .hover\:bg-yellow-50:hover{ background-color: #2d1f00 !important; }
+    .dark .hover\:bg-red-50:hover   { background-color: #2d0a0a !important; }
+    .dark .hover\:bg-green-50:hover { background-color: #052e0a !important; }
   </style>
 </head>
 <body class="bg-gray-50 min-h-screen">
 
   <!-- Nav -->
-  <nav class="bg-[#0053e2] shadow-md">
+  <nav class="bg-[#0053e2] shadow-md no-print">
     <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
       <div class="flex items-center gap-3">
         <span class="text-white font-bold text-lg tracking-wide">PHL5 COMPLIANCE DASHBOARD</span>
       </div>
       <div class="flex items-center gap-4">
+        <span class="text-white/60 text-xs"
+          hx-get="/api/last-refreshed"
+          hx-trigger="load, every 60s"
+          hx-swap="innerHTML">
+          &#128260; Loading...
+        </span>
         <a href="/" class="text-white/80 hover:text-white text-sm transition">&#8962; Home</a>
-
+        <button id="dark-toggle" onclick="toggleDark()"
+          class="text-white/80 hover:text-white text-lg transition" title="Toggle dark mode">
+          &#127769;
+        </button>
       </div>
     </div>
   </nav>
@@ -80,6 +110,14 @@
         {% if '/scorecard' in request.url.path %}bg-white/10 text-white border-b-2 border-[#ffc220]{% endif %}">
         &#127942; Manager Scorecard
       </a>
+      <a href="/lookup" class="px-5 py-3 text-sm font-semibold text-white/70 hover:text-white hover:bg-white/10 transition rounded-t-md
+        {% if '/lookup' in request.url.path %}bg-white/10 text-white border-b-2 border-[#ffc220]{% endif %}">
+        &#128269; Associate Lookup
+      </a>
+      <a href="/trends" class="px-5 py-3 text-sm font-semibold text-white/70 hover:text-white hover:bg-white/10 transition rounded-t-md
+        {% if '/trends' in request.url.path %}bg-white/10 text-white border-b-2 border-[#ffc220]{% endif %}">
+        &#128202; Trends
+      </a>
     </div>
   </div>
 
@@ -90,6 +128,25 @@
   <footer class="text-center text-gray-400 text-xs py-6 mt-8">
     PHL5 Compliance &mdash; Internal Use Only
   </footer>
+
+<script>
+// Dark mode
+function toggleDark() {
+  var html = document.getElementById('html-root');
+  var isDark = html.classList.toggle('dark');
+  localStorage.setItem('darkMode', isDark ? '1' : '0');
+  document.getElementById('dark-toggle').textContent = isDark ? '\u2600\ufe0f' : '\U0001f319';
+}
+(function () {
+  if (localStorage.getItem('darkMode') === '1') {
+    document.getElementById('html-root').classList.add('dark');
+    document.addEventListener('DOMContentLoaded', function () {
+      var btn = document.getElementById('dark-toggle');
+      if (btn) btn.textContent = '\u2600\ufe0f';
+    });
+  }
+})();
+</script>
 
 <script>
 function exportTableToCSV(tableId, filename) {

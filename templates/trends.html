@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}Compliance Trends - PHL5{% endblock %}
+{% block content %}
+
+<div class="mb-8">
+  <h1 class="text-3xl font-bold text-[#041f41] mb-1">&#128202; Historical Trends</h1>
+  <p class="text-gray-500 text-sm">Daily compliance snapshots — last 60 days</p>
+</div>
+
+{% if snapshots | length == 0 %}
+<div class="text-center py-20">
+  <div class="text-5xl mb-4">&#128200;</div>
+  <p class="text-xl font-bold text-gray-400">No snapshots yet</p>
+  <p class="text-gray-400 text-sm mt-2">Snapshots are saved automatically on each data refresh. Check back after the next refresh!</p>
+</div>
+{% else %}
+
+<!-- Summary Cards -->
+{% set last = snapshots[-1] %}
+{% set first = snapshots[0] %}
+<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-10">
+  {% set metrics = [
+    ('CBL Pending',      last.cbl, first.cbl, '#0053e2', 'bg-blue-50'),
+    ('Att. Exceptions',  last.att, first.att, '#995213', 'bg-yellow-50'),
+    ('Check-Ins Needed', last.chk, first.chk, '#ea1100', 'bg-red-50'),
+    ('Points 5+',        last.pts, first.pts, '#7f1d1d', 'bg-red-50'),
+    ('PTO Pending',      last.pto, first.pto, '#2a8703', 'bg-green-50'),
+  ] %}
+  {% for label, curr, start_val, color, bg in metrics %}
+  {% set delta = curr - start_val %}
+  <div class="{{ bg }} border-2 rounded-2xl p-4 text-center" style="border-color:{{ color }};">
+    <div class="text-xs font-semibold uppercase tracking-wider mb-1" style="color:{{ color }};">{{ label }}</div>
+    <div class="text-4xl font-black" style="color:{{ color }};">{{ curr }}</div>
+    <div class="text-xs mt-1 {% if delta > 0 %}text-red-500{% elif delta < 0 %}text-green-600{% else %}text-gray-400{% endif %}">
+      {% if delta > 0 %}&#9650; +{{ delta }}{% elif delta < 0 %}&#9660; {{ delta }}{% else %}&mdash; No change{% endif %}
+      <span class="text-gray-400"> vs {{ snapshots|length }}d ago</span>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Line Chart -->
+<div class="bg-white rounded-2xl shadow border border-gray-100 p-6 mb-10">
+  <h2 class="text-lg font-bold text-[#041f41] mb-4">All Metrics Over Time</h2>
+  <div style="height:380px;">
+    <canvas id="trendsChart"></canvas>
+  </div>
+</div>
+
+<!-- Snapshot Table -->
+<div class="overflow-x-auto rounded-2xl shadow border border-gray-100">
+  <table class="w-full text-sm sortable-table" id="trends-table">
+    <thead class="bg-[#041f41] text-white">
+      <tr>
+        <th class="px-4 py-3 text-left font-semibold">Date</th>
+        <th class="px-4 py-3 text-center font-semibold">&#128218; CBL</th>
+        <th class="px-4 py-3 text-center font-semibold">&#128197; Attendance</th>
+        <th class="px-4 py-3 text-center font-semibold">&#9989; Check-Ins</th>
+        <th class="px-4 py-3 text-center font-semibold">&#9888;&#65039; Points 5+</th>
+        <th class="px-4 py-3 text-center font-semibold">&#128203; PTO</th>
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-gray-100">
+      {% for s in snapshots | reverse %}
+      <tr class="hover:bg-blue-50 transition">
+        <td class="px-4 py-2 font-medium text-gray-700">{{ s.date }}</td>
+        <td class="px-4 py-2 text-center font-bold text-[#0053e2]">{{ s.cbl }}</td>
+        <td class="px-4 py-2 text-center font-bold text-[#995213]">{{ s.att }}</td>
+        <td class="px-4 py-2 text-center font-bold text-[#ea1100]">{{ s.chk }}</td>
+        <td class="px-4 py-2 text-center font-bold text-[#7f1d1d]">{{ s.pts }}</td>
+        <td class="px-4 py-2 text-center font-bold text-[#2a8703]">{{ s.pto }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<script>
+var data = {{ snapshots_json }};
+var labels = data.map(function(d) { return d.date; });
+
+new Chart(document.getElementById('trendsChart'), {
+  type: 'line',
+  data: {
+    labels: labels,
+    datasets: [
+      { label: 'CBL Pending',      data: data.map(function(d){return d.cbl;}), borderColor:'#0053e2', backgroundColor:'rgba(0,83,226,0.08)', tension:0.3, fill:true, pointRadius:3 },
+      { label: 'Att. Exceptions',  data: data.map(function(d){return d.att;}), borderColor:'#ffc220', backgroundColor:'rgba(255,194,32,0.08)', tension:0.3, fill:true, pointRadius:3 },
+      { label: 'Check-Ins Needed', data: data.map(function(d){return d.chk;}), borderColor:'#ea1100', backgroundColor:'rgba(234,17,0,0.08)', tension:0.3, fill:true, pointRadius:3 },
+      { label: 'Points 5+',        data: data.map(function(d){return d.pts;}), borderColor:'#7f1d1d', backgroundColor:'rgba(127,29,29,0.08)', tension:0.3, fill:true, pointRadius:3 },
+      { label: 'PTO Pending',      data: data.map(function(d){return d.pto;}), borderColor:'#2a8703', backgroundColor:'rgba(42,135,3,0.08)', tension:0.3, fill:true, pointRadius:3 },
+    ]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { position: 'top' } },
+    scales: { y: { beginAtZero: true } }
+  }
+});
+</script>
+
+{% endif %}
+{% endblock %}

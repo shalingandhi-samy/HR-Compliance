@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+{% block title %}Associate Lookup - PHL5{% endblock %}
+{% block content %}
+
+<div class="mb-8">
+  <h1 class="text-3xl font-bold text-[#041f41] mb-1">&#128269; Associate Lookup</h1>
+  <p class="text-gray-500 text-sm">Search any associate to see all their open compliance items across every module</p>
+</div>
+
+<!-- Search Form -->
+<form method="get" action="/lookup" class="mb-8">
+  <div class="flex gap-3 max-w-xl">
+    <input
+      name="q"
+      value="{{ q }}"
+      type="text"
+      placeholder="Type associate name..."
+      autofocus
+      class="flex-1 px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-[#0053e2] focus:outline-none text-sm transition"
+    />
+    <button type="submit"
+      class="bg-[#0053e2] hover:bg-blue-700 text-white font-bold px-6 py-3 rounded-xl transition">
+      &#128269; Search
+    </button>
+  </div>
+</form>
+
+{% if q and results %}
+
+  {% if not results.found %}
+  <div class="text-center py-16">
+    <div class="text-5xl mb-4">&#128566;</div>
+    <p class="text-xl font-bold text-gray-500">No associate found matching "{{ q }}"</p>
+    <p class="text-gray-400 text-sm mt-2">Try a partial name — e.g. "Smith" instead of "John Smith"</p>
+  </div>
+  {% else %}
+
+  <p class="text-sm text-gray-500 mb-6">Found <strong>{{ results.count }}</strong> associate(s) matching "{{ q }}"</p>
+
+  {% for assoc in results.results %}
+  <div class="mb-10 bg-white rounded-2xl shadow border border-gray-100 overflow-hidden">
+
+    <!-- Associate Header -->
+    <div class="bg-[#041f41] text-white px-6 py-4 flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <div class="text-lg font-black">{{ assoc.name }}</div>
+        <div class="text-white/60 text-xs mt-0.5">Manager: {{ assoc.manager }} &nbsp;|&nbsp; {{ assoc.shift }}</div>
+      </div>
+      <div class="flex gap-3 flex-wrap">
+        {% if assoc.cbl %}<span class="badge" style="background:#1e3a5f;color:#93c5fd;border-color:#3b82f6;">&#128218; {{ assoc.cbl|length }} CBL</span>{% endif %}
+        {% if assoc.attendance %}<span class="badge" style="background:#3d2000;color:#fcd34d;border-color:#ffc220;">&#128197; {{ assoc.attendance|length }} Att</span>{% endif %}
+        {% if assoc.checkins %}<span class="badge" style="background:#3d0000;color:#fca5a5;border-color:#ea1100;">&#9989; {{ assoc.checkins|length }} Chk</span>{% endif %}
+        {% if assoc.points %}<span class="badge" style="background:#2d0a0a;color:#fca5a5;border-color:#7f1d1d;">&#9888;&#65039; {{ assoc.points[0].occurrences }} pts</span>{% endif %}
+        {% if assoc.pto %}<span class="badge" style="background:#052e0a;color:#86efac;border-color:#2a8703;">&#128203; {{ assoc.pto|length }} PTO</span>{% endif %}
+      </div>
+    </div>
+
+    <div class="divide-y divide-gray-100">
+
+      <!-- CBLs -->
+      {% if assoc.cbl %}
+      <div class="px-6 py-4">
+        <h3 class="text-sm font-bold text-[#0053e2] mb-3">&#128218; CBL Pending</h3>
+        <table class="w-full text-xs">
+          <thead><tr class="text-gray-400 uppercase tracking-wide">
+            <th class="text-left pb-1">Item</th>
+            <th class="text-left pb-1">Job</th>
+            <th class="text-center pb-1">Status</th>
+            <th class="text-left pb-1">Due</th>
+          </tr></thead>
+          <tbody class="divide-y divide-gray-50">
+            {% for r in assoc.cbl %}
+            <tr>
+              <td class="py-1 pr-4 text-gray-700">{{ r.item_name }}</td>
+              <td class="py-1 pr-4 text-gray-500">{{ r.job_description }}</td>
+              <td class="py-1 text-center">
+                <span class="badge
+                  {% if r.status == 'Overdue' %}status-overdue
+                  {% elif r.status == '7 Days' %}status-7days
+                  {% elif r.status == '14 Days' %}status-14days
+                  {% elif r.status == '30 Days' %}status-30days
+                  {% else %}status-60days{% endif %}">
+                  {{ r.status }}
+                </span>
+              </td>
+              <td class="py-1 text-gray-400">{{ r.due_date.strftime('%m/%d/%Y') if r.due_date else '—' }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% endif %}
+
+      <!-- Attendance -->
+      {% if assoc.attendance %}
+      <div class="px-6 py-4">
+        <h3 class="text-sm font-bold text-[#995213] mb-3">&#128197; Attendance Exceptions</h3>
+        <div class="flex flex-wrap gap-2">
+          {% for r in assoc.attendance %}
+          <span class="text-xs bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-lg px-3 py-1">
+            {{ results.exception_labels.get(r.exception_type, r.exception_type) }}
+            {% if r.exception_date %} &mdash; {{ r.exception_date.strftime('%m/%d/%Y') }}{% endif %}
+          </span>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Check-ins -->
+      {% if assoc.checkins %}
+      <div class="px-6 py-4">
+        <h3 class="text-sm font-bold text-[#ea1100] mb-2">&#9989; Check-Ins Needed</h3>
+        <p class="text-sm text-gray-600">
+          <span class="badge status-overdue">{{ assoc.checkins[0].checkins_needed }}</span>
+          check-in(s) overdue
+        </p>
+      </div>
+      {% endif %}
+
+      <!-- Points -->
+      {% if assoc.points %}
+      <div class="px-6 py-4">
+        <h3 class="text-sm font-bold text-[#7f1d1d] mb-2">&#9888;&#65039; Attendance Points 5+</h3>
+        <p class="text-sm text-gray-600">
+          <span class="badge" style="background:#fef2f2;color:#7f1d1d;border-color:#7f1d1d;">{{ assoc.points[0].occurrences }}</span>
+          occurrences &nbsp;|&nbsp; WIN: {{ assoc.points[0].win }}
+        </p>
+      </div>
+      {% endif %}
+
+      <!-- PTO -->
+      {% if assoc.pto %}
+      <div class="px-6 py-4">
+        <h3 class="text-sm font-bold text-[#2a8703] mb-3">&#128203; Pending PTO</h3>
+        <div class="flex flex-wrap gap-2">
+          {% for r in assoc.pto %}
+          <span class="text-xs bg-green-50 border border-green-200 text-green-800 rounded-lg px-3 py-1">
+            {{ r.date_requested }} &mdash; {{ r.time_requested }}
+          </span>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+    </div>
+  </div>
+  {% endfor %}
+
+  {% endif %}
+{% endif %}
+
+{% endblock %}

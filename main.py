@@ -33,12 +33,21 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 import logging
 
+import json
 import onedrive_client
 from file_watcher import start_file_watcher
 from scorecard_data import get_scorecard_summary, get_manager_scorecard
+from associate_lookup import search_associate
+from history_db import init_db, save_snapshot, get_snapshots
+from alerts import check_and_send_alerts
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+
+from datetime import datetime
+
+_last_refreshed: datetime | None = None
 
 
 def scheduled_refresh():
@@ -46,6 +55,7 @@ def scheduled_refresh():
 
     Downloads fresh bytes from OneDrive once, then re-parses all sheets.
     """
+    global _last_refreshed
     logger.info("Scheduled refresh triggered - downloading latest Excel from OneDrive...")
     onedrive_client.refresh_file_bytes()
     load_data(force=True)
@@ -53,7 +63,39 @@ def scheduled_refresh():
     load_checkins(force=True)
     load_points(force=True)
     load_pto(force=True)
+    _last_refreshed = datetime.now()
+    # Save daily snapshot for trending
+    _save_snapshot_now()
+    # Check alert thresholds
+    try:
+        check_and_send_alerts(
+            load_data(), load_attendance(), load_checkins(), load_points(), load_pto()
+        )
+    except Exception as exc:
+        logger.warning(f"Alert check failed: {exc}")
     logger.info("Scheduled refresh complete!")
+
+
+def _save_snapshot_now() -> None:
+    """Pull current totals from cached data and persist a snapshot."""
+    try:
+        cbl = load_data()
+        att = load_attendance()
+        chk = load_checkins()
+        pts = load_points()
+        pto = load_pto()
+        from checkin_data import get_checkin_summary
+        chk_summary = get_checkin_summary(chk)
+        save_snapshot(
+            cbl=len(cbl),
+            att=len(att),
+            chk=chk_summary["total"],
+            pts=len(pts),
+            pto=len(pto),
+        )
+        logger.info("Snapshot saved to history.db")
+    except Exception as exc:
+        logger.warning(f"Snapshot failed: {exc}")
 
 
 app = FastAPI(title="PHL5 Compliance Dashboard")
@@ -73,6 +115,10 @@ async def startup_event():
     load_checkins()
     load_points()
     load_pto()
+    global _last_refreshed
+    _last_refreshed = datetime.now()
+    init_db()
+    _save_snapshot_now()
     logger.info("All data loaded and ready!")
     start_file_watcher(scheduled_refresh)
 
@@ -247,6 +293,41 @@ async def pto_manager(request: Request, manager_name: str):
         "request": request,
         "data": data,
         "quote": quote,
+    })
+
+
+@app.get("/api/last-refreshed", response_class=HTMLResponse)
+async def last_refreshed():
+    """Returns a small HTML snippet showing the last refresh time."""
+    if _last_refreshed:
+        ts = _last_refreshed.strftime("%b %d, %Y %I:%M %p")
+        return HTMLResponse(f'<span>&#128260; Last refreshed: <strong>{ts}</strong></span>')
+    return HTMLResponse('<span>&#128260; Not yet refreshed</span>')
+
+
+@app.get("/lookup", response_class=HTMLResponse)
+async def lookup(request: Request, q: str = ""):
+    cbl = load_data()
+    att = load_attendance()
+    chk = load_checkins()
+    pts = load_points()
+    pto = load_pto()
+    results = search_associate(q, cbl, att, chk, pts, pto) if q else None
+    return templates.TemplateResponse("lookup.html", {
+        "request": request,
+        "q": q,
+        "results": results,
+        "quote": quote,
+    })
+
+
+@app.get("/trends", response_class=HTMLResponse)
+async def trends(request: Request):
+    snapshots = get_snapshots(days=60)
+    return templates.TemplateResponse("trends.html", {
+        "request": request,
+        "snapshots": snapshots,
+        "snapshots_json": json.dumps(snapshots),
     })
 
 
