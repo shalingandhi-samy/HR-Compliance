@@ -129,6 +129,7 @@ scheduler.add_job(scheduled_refresh, CronTrigger(hour=20, minute=30))
 scheduler.start()
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
+templates.env.globals["quote"] = quote
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -305,16 +306,17 @@ async def leaderboard(request: Request):
     pto = load_pto()
     summary = get_scorecard_summary(cbl, att, chk, pts, pto)
     rows = summary["rows"]
-    # Score: 100 = perfect, 0 = worst. Normalize by highest issue total.
-    worst = max((r["issue_total"] for r in rows), default=1) or 1
-    for i, r in enumerate(sorted(rows, key=lambda x: x["issue_total"])):
+    # Sort best (fewest issues) → worst
+    ranked = sorted(rows, key=lambda x: x["issue_total"])
+    worst = ranked[-1]["issue_total"] if ranked else 1
+    if worst == 0:
+        worst = 1
+    for i, r in enumerate(ranked):
         r["score"] = round((1 - r["issue_total"] / worst) * 100)
         r["rank"] = i + 1
-    ranked = sorted(rows, key=lambda r: r["rank"])
     return templates.TemplateResponse("leaderboard.html", {
         "request": request,
         "rows": ranked,
-        "worst": worst,
     })
 
 
