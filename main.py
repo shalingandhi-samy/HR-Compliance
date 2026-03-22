@@ -277,9 +277,16 @@ async def points_manager(request: Request, manager_name: str):
 @app.post("/api/notes/{win}")
 async def upsert_note(win: str, request: Request):
     form = await request.form()
-    note_text = form.get("note", "")
+    note_text = form.get("note", "").strip()
     save_note(win, note_text)
-    return HTMLResponse(f'<span class="text-green-600 text-xs">✓ Saved</span>')
+    if note_text:
+        return HTMLResponse(
+            f'<span class="inline-flex items-center gap-1 bg-blue-50 text-[#0053e2] '
+            f'border border-blue-100 rounded-lg px-2 py-1 text-xs">'
+            f'📝 {note_text}</span> '
+            f'<span class="text-green-600 text-xs font-semibold">✓ Saved</span>'
+        )
+    return HTMLResponse('<span class="text-gray-400 text-xs">Note cleared</span>')
 
 
 @app.get("/pto", response_class=HTMLResponse)
