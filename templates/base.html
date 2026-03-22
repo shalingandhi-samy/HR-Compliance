@@ -26,6 +26,10 @@
     .status-30days    { background-color: #eff6ff; color: #0053e2; border-color: #0053e2; }
     .status-60days    { background-color: #f0fdf4; color: #2a8703; border-color: #2a8703; }
     .badge { display:inline-flex; align-items:center; padding:2px 10px; border-radius:9999px; font-size:0.75rem; font-weight:600; border:1px solid; }
+    .sortable-table thead th { cursor: pointer; user-select: none; white-space: nowrap; }
+    .sortable-table thead th:hover { opacity: 0.82; }
+    .sortable-table thead th.sort-asc::after  { content: ' ↑'; font-size: 0.7rem; }
+    .sortable-table thead th.sort-desc::after { content: ' ↓'; font-size: 0.7rem; }
   </style>
 </head>
 <body class="bg-gray-50 min-h-screen">
@@ -38,14 +42,7 @@
       </div>
       <div class="flex items-center gap-4">
         <a href="/" class="text-white/80 hover:text-white text-sm transition">&#8962; Home</a>
-        <form method="post" action="/refresh" id="refresh-form">
-          <button type="submit"
-            id="refresh-btn"
-            class="flex items-center gap-2 bg-[#ffc220] hover:bg-[#f5b800] text-[#041f41] text-sm font-bold px-4 py-1.5 rounded-full transition-all duration-200 shadow"
-            onclick="this.disabled=true; this.innerHTML='&#8987; Refreshing&hellip;';">
-            &#128260; Refresh Data
-          </button>
-        </form>
+
       </div>
     </div>
   </nav>
@@ -88,5 +85,42 @@
     PHL5 Compliance &mdash; Internal Use Only
   </footer>
 
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('table.sortable-table').forEach(function (table) {
+    var headers = Array.from(table.querySelectorAll('thead th'));
+    headers.forEach(function (th, colIdx) {
+      th.addEventListener('click', function () {
+        var tbody = table.querySelector('tbody');
+        var rows = Array.from(tbody.querySelectorAll('tr'));
+        var asc = th.dataset.sortDir !== 'asc';
+
+        // Reset all headers
+        headers.forEach(function (h) {
+          h.classList.remove('sort-asc', 'sort-desc');
+          delete h.dataset.sortDir;
+        });
+        th.dataset.sortDir = asc ? 'asc' : 'desc';
+        th.classList.add(asc ? 'sort-asc' : 'sort-desc');
+
+        rows.sort(function (a, b) {
+          var aCells = a.querySelectorAll('td');
+          var bCells = b.querySelectorAll('td');
+          var aText = (aCells[colIdx] ? aCells[colIdx].textContent.trim() : '');
+          var bText = (bCells[colIdx] ? bCells[colIdx].textContent.trim() : '');
+          var aNum = parseFloat(aText.replace(/[^0-9.-]/g, ''));
+          var bNum = parseFloat(bText.replace(/[^0-9.-]/g, ''));
+          if (!isNaN(aNum) && !isNaN(bNum)) {
+            return asc ? aNum - bNum : bNum - aNum;
+          }
+          return asc ? aText.localeCompare(bText) : bText.localeCompare(aText);
+        });
+
+        rows.forEach(function (row) { tbody.appendChild(row); });
+      });
+    });
+  });
+});
+</script>
 </body>
 </html>
