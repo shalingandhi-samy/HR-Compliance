@@ -2,7 +2,7 @@
 from urllib.parse import quote, unquote
 
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -41,7 +41,11 @@ from associate_lookup import search_associate
 from history_db import init_db, save_snapshot, get_snapshots
 from alerts import check_and_send_alerts
 from shifts_data import get_shift_breakdown
-from email_scorecards import send_all_scorecards
+from email_scorecards import send_all_scorecards, get_manager_email, _render_scorecard_email, _load_config
+import smtplib
+import configparser
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText as _MIMEText
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -128,11 +132,6 @@ async def startup_event():
 scheduler = BackgroundScheduler()
 scheduler.add_job(scheduled_refresh, CronTrigger(hour=8, minute=30))
 scheduler.add_job(scheduled_refresh, CronTrigger(hour=20, minute=30))
-# Email scorecards every Monday at 7 AM
-scheduler.add_job(
-    lambda: send_all_scorecards(dry_run=False),
-    CronTrigger(day_of_week="mon", hour=7, minute=0),
-)
 scheduler.start()
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
@@ -317,6 +316,44 @@ async def shifts(request: Request):
         "breakdown": breakdown,
         "breakdown_json": _json.dumps(breakdown["rows"]),
     })
+
+
+@app.post("/send-scorecard/{manager_name}")
+async def send_single_scorecard(manager_name: str, request: Request):
+    """Send one manager's scorecard to a user-supplied email address."""
+    body = await request.json()
+    email = (body.get("email") or "").strip()
+    if not email or "@" not in email:
+        return JSONResponse({"ok": False, "error": "Invalid email address"}, status_code=400)
+
+    manager = unquote(manager_name)
+    cbl = load_data()
+    att = load_attendance()
+    chk = load_checkins()
+    pts = load_points()
+    pto = load_pto()
+    data = get_manager_scorecard(manager, cbl, att, chk, pts, pto)
+    html = _render_scorecard_email(manager, data)
+
+    cfg = _load_config()
+    smtp_host = cfg.get("settings", "smtp_host", fallback="smtpout.wal-mart.com")
+    smtp_port = int(cfg.get("settings", "smtp_port", fallback="25"))
+    from_addr = cfg.get("settings", "from_address", fallback="phl5-compliance@wal-mart.com")
+
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = f"PHL5 Compliance Scorecard \u2014 {manager} \u2014 {datetime.now().strftime('%b %d, %Y')}"
+    msg["From"]    = from_addr
+    msg["To"]      = email
+    msg.attach(_MIMEText(html, "html"))
+
+    try:
+        with smtplib.SMTP(smtp_host, smtp_port, timeout=15) as server:
+            server.sendmail(from_addr, [email], msg.as_string())
+        logger.info(f"Scorecard emailed for {manager} -> {email}")
+        return JSONResponse({"ok": True})
+    except Exception as exc:
+        logger.warning(f"Scorecard email failed for {manager}: {exc}")
+        return JSONResponse({"ok": False, "error": str(exc)}, status_code=500)
 
 
 @app.post("/send-scorecards", response_class=HTMLResponse)

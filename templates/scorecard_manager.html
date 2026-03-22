@@ -5,11 +5,108 @@
 <!-- Header -->
 <div class="mb-6 flex items-center justify-between">
   <a href="/scorecard" class="text-[#0053e2] hover:underline text-sm no-print">&larr; All Managers</a>
-  <button onclick="window.print()"
-    class="no-print flex items-center gap-2 bg-[#041f41] hover:bg-gray-800 text-white text-sm font-bold px-4 py-2 rounded-xl transition">
-    &#128438; Print Scorecard
-  </button>
+  <div class="flex items-center gap-2 no-print">
+    <button onclick="document.getElementById('email-modal').classList.remove('hidden')"
+      class="flex items-center gap-2 bg-[#0053e2] hover:bg-blue-700 text-white text-sm font-bold px-4 py-2 rounded-xl transition">
+      &#128231; Email Scorecard
+    </button>
+    <button onclick="window.print()"
+      class="flex items-center gap-2 bg-[#041f41] hover:bg-gray-800 text-white text-sm font-bold px-4 py-2 rounded-xl transition">
+      &#128438; Print Scorecard
+    </button>
+  </div>
 </div>
+
+<!-- Email Modal -->
+<div id="email-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+  <div class="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md mx-4">
+    <h2 class="text-xl font-black text-[#041f41] mb-1">&#128231; Email Scorecard</h2>
+    <p class="text-sm text-gray-500 mb-6">Send <strong>{{ data.manager }}</strong>'s scorecard to any email address.</p>
+
+    <div id="email-form">
+      <label class="block text-sm font-semibold text-gray-700 mb-2">Email Address</label>
+      <input id="email-input" type="email" placeholder="name@wal-mart.com"
+        class="w-full px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:border-[#0053e2] focus:outline-none text-sm mb-4 transition"
+        onkeydown="if(event.key==='Enter') sendScorecard()" />
+      <div id="email-error" class="hidden text-red-500 text-xs mb-3">Please enter a valid email address.</div>
+      <div class="flex gap-3">
+        <button onclick="sendScorecard()"
+          class="flex-1 bg-[#0053e2] hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl text-sm transition">
+          &#128231; Send
+        </button>
+        <button onclick="closeModal()"
+          class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-2.5 rounded-xl text-sm transition">
+          Cancel
+        </button>
+      </div>
+    </div>
+
+    <div id="email-sending" class="hidden text-center py-4">
+      <div class="text-3xl mb-2">&#128231;</div>
+      <p class="text-sm text-gray-500">Sending scorecard...</p>
+    </div>
+
+    <div id="email-success" class="hidden text-center py-4">
+      <div class="text-4xl mb-2">&#9989;</div>
+      <p class="font-bold text-green-600 mb-1">Sent!</p>
+      <p class="text-sm text-gray-500" id="email-sent-to"></p>
+      <button onclick="closeModal()" class="mt-4 bg-[#0053e2] text-white font-bold px-6 py-2 rounded-xl text-sm">Done</button>
+    </div>
+
+    <div id="email-failure" class="hidden text-center py-4">
+      <div class="text-4xl mb-2">&#10060;</div>
+      <p class="font-bold text-red-600 mb-1">Failed to send</p>
+      <p class="text-sm text-gray-400" id="email-error-msg"></p>
+      <button onclick="showForm()" class="mt-4 bg-gray-100 text-gray-700 font-bold px-6 py-2 rounded-xl text-sm">Try Again</button>
+    </div>
+  </div>
+</div>
+
+<script>
+function closeModal() {
+  document.getElementById('email-modal').classList.add('hidden');
+  showForm();
+  document.getElementById('email-input').value = '';
+}
+function showForm() {
+  document.getElementById('email-form').classList.remove('hidden');
+  document.getElementById('email-sending').classList.add('hidden');
+  document.getElementById('email-success').classList.add('hidden');
+  document.getElementById('email-failure').classList.add('hidden');
+}
+function sendScorecard() {
+  var email = document.getElementById('email-input').value.trim();
+  var errEl = document.getElementById('email-error');
+  if (!email || !email.includes('@')) { errEl.classList.remove('hidden'); return; }
+  errEl.classList.add('hidden');
+  document.getElementById('email-form').classList.add('hidden');
+  document.getElementById('email-sending').classList.remove('hidden');
+  fetch('/send-scorecard/{{ quote(data.manager) }}', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: email })
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(res) {
+    document.getElementById('email-sending').classList.add('hidden');
+    if (res.ok) {
+      document.getElementById('email-sent-to').textContent = 'Sent to ' + email;
+      document.getElementById('email-success').classList.remove('hidden');
+    } else {
+      document.getElementById('email-error-msg').textContent = res.error || 'Unknown error';
+      document.getElementById('email-failure').classList.remove('hidden');
+    }
+  })
+  .catch(function(e) {
+    document.getElementById('email-sending').classList.add('hidden');
+    document.getElementById('email-error-msg').textContent = e.toString();
+    document.getElementById('email-failure').classList.remove('hidden');
+  });
+}
+document.getElementById('email-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+</script>
 <div class="mb-8">
   <h1 class="text-3xl font-bold text-[#041f41] mb-1">&#127942; {{ data.manager }}</h1>
   <p class="text-gray-500 text-sm">Full compliance scorecard &mdash; all modules</p>
