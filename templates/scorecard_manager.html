@@ -1,0 +1,262 @@
+{% extends "base.html" %}
+{% block title %}{{ data.manager }} Scorecard - PHL5{% endblock %}
+{% block content %}
+
+<!-- Header -->
+<div class="mb-6 flex items-center gap-4">
+  <a href="/scorecard" class="text-[#0053e2] hover:underline text-sm">&larr; All Managers</a>
+</div>
+<div class="mb-8">
+  <h1 class="text-3xl font-bold text-[#041f41] mb-1">&#127942; {{ data.manager }}</h1>
+  <p class="text-gray-500 text-sm">Full compliance scorecard &mdash; all modules</p>
+</div>
+
+<!-- Top Summary Cards -->
+<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-10">
+
+  <div class="bg-blue-50 border-2 border-[#0053e2] rounded-2xl p-4 text-center">
+    <div class="text-xs font-semibold text-[#0053e2] uppercase tracking-wider mb-1">&#128218; CBLs Pending</div>
+    <div class="text-4xl font-black text-[#0053e2]">{{ data.cbl.total }}</div>
+  </div>
+
+  <div class="bg-yellow-50 border-2 border-[#ffc220] rounded-2xl p-4 text-center">
+    <div class="text-xs font-semibold text-[#995213] uppercase tracking-wider mb-1">&#128197; Att. Exceptions</div>
+    <div class="text-4xl font-black text-[#995213]">{{ data.attendance.total }}</div>
+  </div>
+
+  <div class="bg-red-50 border-2 border-[#ea1100] rounded-2xl p-4 text-center">
+    <div class="text-xs font-semibold text-[#ea1100] uppercase tracking-wider mb-1">&#9989; Check-Ins Needed</div>
+    <div class="text-4xl font-black text-[#ea1100]">{{ data.checkins.total }}</div>
+    <div class="text-xs text-red-400 mt-1">{{ data.checkins.associates }} associates</div>
+  </div>
+
+  <div class="bg-red-50 border-2 border-[#7f1d1d] rounded-2xl p-4 text-center">
+    <div class="text-xs font-semibold text-[#7f1d1d] uppercase tracking-wider mb-1">&#9888;&#65039; Points 5+</div>
+    <div class="text-4xl font-black text-[#7f1d1d]">{{ data.points.total }}</div>
+  </div>
+
+  <div class="bg-green-50 border-2 border-[#2a8703] rounded-2xl p-4 text-center">
+    <div class="text-xs font-semibold text-[#2a8703] uppercase tracking-wider mb-1">&#128203; PTO Pending</div>
+    <div class="text-4xl font-black text-[#2a8703]">{{ data.pto.total }}</div>
+  </div>
+
+</div>
+
+<!-- CBL Section -->
+{% if data.cbl.total > 0 %}
+<section class="mb-10">
+  <h2 class="text-xl font-bold text-[#041f41] mb-4">&#128218; CBL Compliance</h2>
+
+  <!-- Status mini-cards -->
+  <div class="flex flex-wrap gap-3 mb-4">
+    {% for s in data.status_order %}
+    {% set cnt = data.cbl.by_status[s] %}
+    {% if cnt > 0 %}
+    <div class="rounded-xl px-5 py-3 text-center border
+      {% if s == 'Overdue' %}status-overdue
+      {% elif s == '7 Days' %}status-7days
+      {% elif s == '14 Days' %}status-14days
+      {% elif s == '30 Days' %}status-30days
+      {% else %}status-60days{% endif %}">
+      <div class="text-xs font-semibold uppercase tracking-wider opacity-70">{{ s }}</div>
+      <div class="text-2xl font-black">{{ cnt }}</div>
+    </div>
+    {% endif %}
+    {% endfor %}
+  </div>
+
+  <div class="overflow-x-auto rounded-2xl shadow border border-gray-100">
+    <table class="w-full text-sm">
+      <thead class="bg-[#0053e2] text-white">
+        <tr>
+          <th class="px-4 py-2 text-left">Associate</th>
+          <th class="px-4 py-2 text-left">CBL Item</th>
+          <th class="px-4 py-2 text-left">Job</th>
+          <th class="px-4 py-2 text-center">Status</th>
+          <th class="px-4 py-2 text-left">Due Date</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-100">
+        {% for r in data.cbl.records %}
+        <tr class="hover:bg-blue-50 transition">
+          <td class="px-4 py-2 font-medium text-gray-800">{{ r.associate }}</td>
+          <td class="px-4 py-2 text-gray-600 max-w-xs truncate">{{ r.item_name }}</td>
+          <td class="px-4 py-2 text-gray-500 text-xs">{{ r.job_description }}</td>
+          <td class="px-4 py-2 text-center">
+            <span class="badge
+              {% if r.status == 'Overdue' %}status-overdue
+              {% elif r.status == '7 Days' %}status-7days
+              {% elif r.status == '14 Days' %}status-14days
+              {% elif r.status == '30 Days' %}status-30days
+              {% else %}status-60days{% endif %}">
+              {{ r.status }}
+            </span>
+          </td>
+          <td class="px-4 py-2 text-gray-500 text-xs">
+            {{ r.due_date.strftime('%m/%d/%Y') if r.due_date else '—' }}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+
+<!-- Attendance Section -->
+{% if data.attendance.total > 0 %}
+<section class="mb-10">
+  <h2 class="text-xl font-bold text-[#041f41] mb-4">&#128197; Attendance Exceptions</h2>
+
+  <!-- Type mini-cards -->
+  <div class="flex flex-wrap gap-3 mb-4">
+    {% for t in data.attendance.all_types %}
+    {% set cnt = data.attendance.by_type.get(t, 0) %}
+    {% if cnt > 0 %}
+    <div class="rounded-xl px-5 py-3 text-center border bg-yellow-50 border-[#ffc220]">
+      <div class="text-xs font-semibold text-[#995213] uppercase tracking-wider opacity-80">
+        {{ data.exception_labels.get(t, t) }}
+      </div>
+      <div class="text-2xl font-black text-[#995213]">{{ cnt }}</div>
+    </div>
+    {% endif %}
+    {% endfor %}
+  </div>
+
+  <div class="overflow-x-auto rounded-2xl shadow border border-gray-100">
+    <table class="w-full text-sm">
+      <thead class="bg-[#995213] text-white">
+        <tr>
+          <th class="px-4 py-2 text-left">Associate</th>
+          <th class="px-4 py-2 text-center">Exceptions</th>
+          <th class="px-4 py-2 text-left">Types</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-100">
+        {% for assoc in data.attendance.sorted_assocs %}
+        {% set recs = data.attendance.by_assoc[assoc] %}
+        <tr class="hover:bg-yellow-50 transition">
+          <td class="px-4 py-2 font-medium text-gray-800">{{ assoc }}</td>
+          <td class="px-4 py-2 text-center">
+            <span class="badge" style="background:#fffbeb;color:#995213;border-color:#ffc220;">{{ recs | length }}</span>
+          </td>
+          <td class="px-4 py-2 text-xs text-gray-500">
+            {% set type_counts = {} %}
+            {% for r in recs %}
+              {% set _ = type_counts.update({r.exception_type: (type_counts.get(r.exception_type, 0) + 1)}) %}
+            {% endfor %}
+            {% for t, cnt in type_counts.items() %}
+              <span class="mr-2">{{ data.exception_labels.get(t, t) }} ({{ cnt }})</span>
+            {% endfor %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+
+<!-- Check-ins Section -->
+{% if data.checkins.associates > 0 %}
+<section class="mb-10">
+  <h2 class="text-xl font-bold text-[#041f41] mb-4">&#9989; Manager Check-Ins Needed</h2>
+  <div class="overflow-x-auto rounded-2xl shadow border border-gray-100">
+    <table class="w-full text-sm">
+      <thead class="bg-[#ea1100] text-white">
+        <tr>
+          <th class="px-4 py-2 text-left">Associate</th>
+          <th class="px-4 py-2 text-center">Check-Ins Needed</th>
+          <th class="px-4 py-2 text-center">Status</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-100">
+        {% for r in data.checkins.records %}
+        <tr class="hover:bg-red-50 transition">
+          <td class="px-4 py-2 font-medium text-gray-800">{{ r.associate }}</td>
+          <td class="px-4 py-2 text-center">
+            <span class="badge status-overdue">{{ r.checkins_needed }}</span>
+          </td>
+          <td class="px-4 py-2 text-center text-xs text-red-500 font-semibold">{{ r.status }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+
+<!-- Points 5+ Section -->
+{% if data.points.total > 0 %}
+<section class="mb-10">
+  <h2 class="text-xl font-bold text-[#041f41] mb-4">&#9888;&#65039; Attendance Points 5+</h2>
+  <div class="overflow-x-auto rounded-2xl shadow border border-gray-100">
+    <table class="w-full text-sm">
+      <thead style="background:#7f1d1d;" class="text-white">
+        <tr>
+          <th class="px-4 py-2 text-left">Associate</th>
+          <th class="px-4 py-2 text-left">WIN</th>
+          <th class="px-4 py-2 text-center">Occurrences</th>
+          <th class="px-4 py-2 text-left">Shift</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-100">
+        {% for r in data.points.records %}
+        <tr class="hover:bg-red-50 transition">
+          <td class="px-4 py-2 font-medium text-gray-800">{{ r.associate }}</td>
+          <td class="px-4 py-2 text-gray-500 text-xs">{{ r.win }}</td>
+          <td class="px-4 py-2 text-center">
+            <span class="badge" style="background:#fef2f2;color:#7f1d1d;border-color:#7f1d1d;">
+              {{ r.occurrences }}
+            </span>
+          </td>
+          <td class="px-4 py-2 text-gray-500 text-xs">{{ r.shift }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+
+<!-- PTO Section -->
+{% if data.pto.total > 0 %}
+<section class="mb-10">
+  <h2 class="text-xl font-bold text-[#041f41] mb-4">&#128203; Pending Time Off Requests</h2>
+  <div class="overflow-x-auto rounded-2xl shadow border border-gray-100">
+    <table class="w-full text-sm">
+      <thead class="bg-[#2a8703] text-white">
+        <tr>
+          <th class="px-4 py-2 text-left">Associate</th>
+          <th class="px-4 py-2 text-left">Date Requested</th>
+          <th class="px-4 py-2 text-left">Time</th>
+          <th class="px-4 py-2 text-left">Position</th>
+          <th class="px-4 py-2 text-left">Submitted</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-100">
+        {% for r in data.pto.records %}
+        <tr class="hover:bg-green-50 transition">
+          <td class="px-4 py-2 font-medium text-gray-800">{{ r.associate }}</td>
+          <td class="px-4 py-2 text-gray-600">{{ r.date_requested }}</td>
+          <td class="px-4 py-2 text-gray-500 text-xs">{{ r.time_requested }}</td>
+          <td class="px-4 py-2 text-gray-500 text-xs">{{ r.position }}</td>
+          <td class="px-4 py-2 text-gray-400 text-xs">{{ r.date_submitted }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+
+<!-- All clean message -->
+{% if data.cbl.total == 0 and data.attendance.total == 0 and data.checkins.associates == 0 and data.points.total == 0 and data.pto.total == 0 %}
+<div class="text-center py-20">
+  <div class="text-6xl mb-4">&#127881;</div>
+  <p class="text-2xl font-bold text-[#2a8703]">All Clear!</p>
+  <p class="text-gray-400 mt-2">{{ data.manager }} has no open compliance items.</p>
+</div>
+{% endif %}
+
+{% endblock %}

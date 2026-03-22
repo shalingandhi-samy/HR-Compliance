@@ -33,7 +33,7 @@ def load_checkins(force: bool = False) -> list[CheckInRecord]:
 
     records: list[CheckInRecord] = []
     wb = get_workbook()
-    ws = wb["Manager Check-Ins"]
+    ws = wb["Manager Check Ins"]
 
     # First two rows are title/sub-header — skip them
     data_started = False

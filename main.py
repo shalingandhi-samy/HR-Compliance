@@ -35,6 +35,7 @@ import logging
 
 import onedrive_client
 from file_watcher import start_file_watcher
+from scorecard_data import get_scorecard_summary, get_manager_scorecard
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -243,6 +244,37 @@ async def pto_manager(request: Request, manager_name: str):
     records = load_pto()
     data = get_pto_manager_detail(records, manager)
     return templates.TemplateResponse("pto_manager.html", {
+        "request": request,
+        "data": data,
+        "quote": quote,
+    })
+
+
+@app.get("/scorecard", response_class=HTMLResponse)
+async def scorecard(request: Request):
+    cbl = load_data()
+    att = load_attendance()
+    chk = load_checkins()
+    pts = load_points()
+    pto = load_pto()
+    summary = get_scorecard_summary(cbl, att, chk, pts, pto)
+    return templates.TemplateResponse("scorecard.html", {
+        "request": request,
+        "summary": summary,
+        "quote": quote,
+    })
+
+
+@app.get("/scorecard/manager/{manager_name}", response_class=HTMLResponse)
+async def scorecard_manager(request: Request, manager_name: str):
+    manager = unquote(manager_name)
+    cbl = load_data()
+    att = load_attendance()
+    chk = load_checkins()
+    pts = load_points()
+    pto = load_pto()
+    data = get_manager_scorecard(manager, cbl, att, chk, pts, pto)
+    return templates.TemplateResponse("scorecard_manager.html", {
         "request": request,
         "data": data,
         "quote": quote,

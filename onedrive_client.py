@@ -21,8 +21,11 @@ import openpyxl
 
 logger = logging.getLogger(__name__)
 
-LOCAL_FILE_PATH = Path(__file__).parent / "phl5_people_dashboard.xlsx"
-ONEDRIVE_DOWNLOAD_URL = os.getenv("ONEDRIVE_DOWNLOAD_URL", "")
+LOCAL_FILE_PATH = Path(__file__).parent / "phl5_compliance.xlsx"
+ONEDRIVE_DOWNLOAD_URL = os.getenv(
+    "ONEDRIVE_DOWNLOAD_URL",
+    "https://my.wal-mart.com/:x:/r/personal/a0m1czs_wmsc_wal-mart_com/Documents/PHL5%20People%20Dashboard.xlsx?d=wb48b660c85bd404a8a6fa4d17c2be4d4&csf=1&web=1&download=1",
+)
 
 PROXIES = {
     "http": "http://sysproxy.wal-mart.com:8080",
