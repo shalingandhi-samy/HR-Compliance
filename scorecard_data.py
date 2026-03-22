@@ -27,7 +27,8 @@ def _all_managers(
         managers.add(r.manager)
     for r in pto:
         managers.add(r.manager)
-    return sorted(managers)
+    # Filter out blank/None manager names that sneak in from bad Excel rows
+    return sorted(m for m in managers if m and m.strip())
 
 
 def get_scorecard_summary(
