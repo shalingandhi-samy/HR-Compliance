@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Scorecards Sent - PHL5{% endblock %}
+{% block content %}
+
+<div class="mb-8">
+  <h1 class="text-3xl font-bold text-[#041f41] mb-1">&#128231; Scorecard Emails</h1>
+  <p class="text-gray-500 text-sm">Results from manual scorecard send</p>
+</div>
+
+<!-- Summary -->
+<div class="grid grid-cols-3 gap-4 mb-8">
+  <div class="bg-green-50 border-2 border-green-500 rounded-2xl p-5 text-center">
+    <div class="text-3xl font-black text-green-600">{{ result.sent | length }}</div>
+    <div class="text-sm font-semibold text-green-700 mt-1">&#10003; Sent</div>
+  </div>
+  <div class="bg-red-50 border-2 border-red-400 rounded-2xl p-5 text-center">
+    <div class="text-3xl font-black text-red-600">{{ result.failed | length }}</div>
+    <div class="text-sm font-semibold text-red-700 mt-1">&#10007; Failed</div>
+  </div>
+  <div class="bg-gray-50 border-2 border-gray-200 rounded-2xl p-5 text-center">
+    <div class="text-3xl font-black text-gray-500">{{ result.skipped | length }}</div>
+    <div class="text-sm font-semibold text-gray-600 mt-1">&#8212; Skipped</div>
+  </div>
+</div>
+
+{% if result.sent %}
+<div class="bg-white rounded-2xl shadow border border-gray-100 p-5 mb-6">
+  <h2 class="text-sm font-bold text-green-600 mb-3">&#10003; Successfully Sent</h2>
+  <ul class="divide-y divide-gray-100 text-sm">
+    {% for r in result.sent %}
+    <li class="py-2 flex justify-between">
+      <span class="font-medium text-gray-700">{{ r.manager }}</span>
+      <span class="text-gray-400">{{ r.email }}</span>
+    </li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+{% if result.failed %}
+<div class="bg-white rounded-2xl shadow border border-red-200 p-5 mb-6">
+  <h2 class="text-sm font-bold text-red-600 mb-3">&#10007; Failed</h2>
+  <ul class="divide-y divide-gray-100 text-sm">
+    {% for r in result.failed %}
+    <li class="py-2">
+      <div class="flex justify-between">
+        <span class="font-medium text-gray-700">{{ r.manager }}</span>
+        <span class="text-gray-400">{{ r.email }}</span>
+      </div>
+      <div class="text-xs text-red-500 mt-0.5">{{ r.error }}</div>
+    </li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+<div class="flex gap-3">
+  <a href="/scorecard" class="bg-[#0053e2] hover:bg-blue-700 text-white font-bold px-5 py-2.5 rounded-xl text-sm transition">
+    &larr; Back to Scorecard
+  </a>
+  <form method="post" action="/send-scorecards">
+    <button type="submit" class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold px-5 py-2.5 rounded-xl text-sm transition">
+      &#128257; Send Again
+    </button>
+  </form>
+</div>
+
+{% endblock %}

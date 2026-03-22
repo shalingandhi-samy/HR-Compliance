@@ -40,6 +40,8 @@ from scorecard_data import get_scorecard_summary, get_manager_scorecard
 from associate_lookup import search_associate
 from history_db import init_db, save_snapshot, get_snapshots
 from alerts import check_and_send_alerts
+from shifts_data import get_shift_breakdown
+from email_scorecards import send_all_scorecards
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -126,6 +128,11 @@ async def startup_event():
 scheduler = BackgroundScheduler()
 scheduler.add_job(scheduled_refresh, CronTrigger(hour=8, minute=30))
 scheduler.add_job(scheduled_refresh, CronTrigger(hour=20, minute=30))
+# Email scorecards every Monday at 7 AM
+scheduler.add_job(
+    lambda: send_all_scorecards(dry_run=False),
+    CronTrigger(day_of_week="mon", hour=7, minute=0),
+)
 scheduler.start()
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
@@ -294,6 +301,30 @@ async def pto_manager(request: Request, manager_name: str):
         "request": request,
         "data": data,
         "quote": quote,
+    })
+
+
+@app.get("/shifts", response_class=HTMLResponse)
+async def shifts(request: Request):
+    cbl = load_data()
+    att = load_attendance()
+    pts = load_points()
+    pto = load_pto()
+    breakdown = get_shift_breakdown(cbl, att, pts, pto)
+    import json as _json
+    return templates.TemplateResponse("shifts.html", {
+        "request": request,
+        "breakdown": breakdown,
+        "breakdown_json": _json.dumps(breakdown["rows"]),
+    })
+
+
+@app.post("/send-scorecards", response_class=HTMLResponse)
+async def send_scorecards_now(request: Request):
+    result = send_all_scorecards(dry_run=False)
+    return templates.TemplateResponse("send_scorecards_result.html", {
+        "request": request,
+        "result": result,
     })
 
 

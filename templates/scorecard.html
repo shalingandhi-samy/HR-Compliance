@@ -2,9 +2,18 @@
 {% block title %}Manager Scorecard - PHL5{% endblock %}
 {% block content %}
 
-<div class="mb-8">
-  <h1 class="text-3xl font-bold text-[#041f41] mb-1">&#127942; Manager Scorecard</h1>
-  <p class="text-gray-500 text-sm">All compliance metrics side-by-side &mdash; sorted by total issues (highest first)</p>
+<div class="mb-8 flex items-start justify-between">
+  <div>
+    <h1 class="text-3xl font-bold text-[#041f41] mb-1">&#127942; Manager Scorecard</h1>
+    <p class="text-gray-500 text-sm">All compliance metrics side-by-side &mdash; sorted by total issues (highest first)</p>
+  </div>
+  <form method="post" action="/send-scorecards" class="no-print">
+    <button type="submit"
+      class="flex items-center gap-2 bg-[#041f41] hover:bg-gray-800 text-white text-sm font-bold px-4 py-2.5 rounded-xl transition"
+      onclick="return confirm('Send scorecard emails to all managers now?')">
+      &#128231; Email All Scorecards
+    </button>
+  </form>
 </div>
 
 <!-- Legend -->
