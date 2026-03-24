@@ -48,7 +48,7 @@ def get_scorecard_summary(
         chk_total = sum(r.checkins_needed for r in chk if r.manager == m)
         pts_total = sum(1 for r in pts if r.manager == m)
         pto_total = sum(1 for r in pto if r.manager == m)
-        issue_total = cbl_total + att_total + chk_total + pts_total
+        issue_total = cbl_total + att_total + chk_total + pts_total + pto_total
 
         rows.append({
             "manager": m,
