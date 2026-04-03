@@ -1,19 +1,15 @@
-"""Excel file loader — reads from OneDrive direct download URL or local fallback.
+"""Excel file loader — reads from OneDrive via Microsoft Graph API or local fallback.
 
-To enable live OneDrive sync, set the ONEDRIVE_DOWNLOAD_URL environment
-variable to a direct download link from OneDrive/SharePoint.
+Uses the token stored in ~/.code_puppy/msgraph.json (kept fresh by Code Puppy)
+to fetch a pre-authenticated Graph download URL for the file each time.
 
-How to get a direct download link:
-  1. Open the file in OneDrive/SharePoint
-  2. Click Share -> 'Anyone with the link can view'
-  3. Copy the link, then replace '?e=...' with '?download=1'
-  4. Set that URL as ONEDRIVE_DOWNLOAD_URL
+File: PHL5 People Dashboard.xlsx (owned by a0m1czs)
 """
 from __future__ import annotations
 
 import io
+import json
 import logging
-import os
 from pathlib import Path
 from typing import Optional
 
@@ -22,9 +18,13 @@ import openpyxl
 logger = logging.getLogger(__name__)
 
 LOCAL_FILE_PATH = Path(__file__).parent / "phl5_compliance.xlsx"
-ONEDRIVE_DOWNLOAD_URL = os.getenv(
-    "ONEDRIVE_DOWNLOAD_URL",
-    "https://my.wal-mart.com/:x:/r/personal/a0m1czs_wmsc_wal-mart_com/Documents/PHL5%20People%20Dashboard.xlsx?d=wb48b660c85bd404a8a6fa4d17c2be4d4&csf=1&web=1&download=1",
+MSGRAPH_TOKEN_FILE = Path.home() / ".code_puppy" / "msgraph.json"
+
+# Stable Graph identifiers for PHL5 People Dashboard.xlsx
+_DRIVE_ID = "b!_0QBI_JKRE6ehHAn7biSTD0AdXj9cohGsrCpJHG_o6St1whpjN-tQZy9_12-ZK-W"
+_ITEM_ID  = "01QKL2FAAMM2F3JPMFJJAIU35E2F6CXZGU"
+_GRAPH_ITEM_URL = (
+    f"https://graph.microsoft.com/v1.0/drives/{_DRIVE_ID}/items/{_ITEM_ID}"
 )
 
 PROXIES = {
@@ -35,11 +35,45 @@ PROXIES = {
 _file_bytes: Optional[bytes] = None
 
 
-def _download_from_url(url: str) -> bytes:
-    """Download file bytes from a direct OneDrive/SharePoint URL."""
+def _get_graph_token() -> str:
+    """Read the MS Graph access token stored by Code Puppy."""
+    if not MSGRAPH_TOKEN_FILE.exists():
+        raise RuntimeError(
+            f"MS Graph token not found at {MSGRAPH_TOKEN_FILE}.\n"
+            "Open Code Puppy and run any msgraph command to refresh auth."
+        )
+    data = json.loads(MSGRAPH_TOKEN_FILE.read_text(encoding="utf-8"))
+    token = data.get("access_token", "")
+    if not token:
+        raise RuntimeError("access_token missing in msgraph.json — re-auth via Code Puppy.")
+    return token
+
+
+def _get_graph_download_url(token: str) -> str:
+    """Ask Graph API for a fresh pre-authenticated download URL."""
     import requests
-    logger.info(f"Downloading Excel from OneDrive URL...")
-    resp = requests.get(url, proxies=PROXIES, timeout=30, allow_redirects=True)
+    resp = requests.get(
+        _GRAPH_ITEM_URL,
+        headers={"Authorization": f"Bearer {token}"},
+        proxies=PROXIES,
+        timeout=15,
+    )
+    resp.raise_for_status()
+    item = resp.json()
+    download_url = item.get("@microsoft.graph.downloadUrl")
+    if not download_url:
+        raise RuntimeError("Graph API response missing @microsoft.graph.downloadUrl")
+    return download_url
+
+
+def _download_from_graph() -> bytes:
+    """Fetch fresh bytes from OneDrive via Graph API."""
+    import requests
+    logger.info("Fetching fresh download URL from Microsoft Graph...")
+    token = _get_graph_token()
+    download_url = _get_graph_download_url(token)
+    logger.info("Downloading Excel from OneDrive via Graph...")
+    resp = requests.get(download_url, proxies=PROXIES, timeout=30, allow_redirects=True)
     resp.raise_for_status()
     logger.info(f"Downloaded {len(resp.content):,} bytes from OneDrive")
     return resp.content
@@ -50,25 +84,21 @@ def _load_local() -> bytes:
     if not LOCAL_FILE_PATH.exists():
         raise FileNotFoundError(
             f"Local Excel file not found: {LOCAL_FILE_PATH}\n"
-            "Either drop the file there or set ONEDRIVE_DOWNLOAD_URL."
+            "Either place the file there or ensure Code Puppy MS Graph auth is valid."
         )
     logger.info(f"Loading local Excel file: {LOCAL_FILE_PATH}")
     return LOCAL_FILE_PATH.read_bytes()
 
 
 def refresh_file_bytes() -> None:
-    """Reload Excel bytes from OneDrive URL or local file.
-
-    Call this before force-reloading all data modules.
-    """
+    """Reload Excel bytes from OneDrive (Graph API) or fall back to local file."""
     global _file_bytes
-    if ONEDRIVE_DOWNLOAD_URL:
-        try:
-            _file_bytes = _download_from_url(ONEDRIVE_DOWNLOAD_URL)
-            return
-        except Exception as exc:
-            logger.error(f"OneDrive download failed: {exc}")
-            logger.warning("Falling back to local Excel file.")
+    try:
+        _file_bytes = _download_from_graph()
+        return
+    except Exception as exc:
+        logger.error(f"OneDrive download failed: {exc}")
+        logger.warning("Falling back to local Excel file.")
     _file_bytes = _load_local()
 
 

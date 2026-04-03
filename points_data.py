@@ -32,7 +32,7 @@ def load_points(force: bool = False) -> list[PointsRecord]:
 
     records: list[PointsRecord] = []
     wb = get_workbook()
-    ws = wb["Attendance Points 5+"]
+    ws = wb["Attendance +5"]
 
     header_passed = False
     for row in ws.iter_rows(values_only=True):
