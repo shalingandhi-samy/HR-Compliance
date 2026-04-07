@@ -21,8 +21,8 @@ LOCAL_FILE_PATH = Path(__file__).parent / "phl5_compliance.xlsx"
 MSGRAPH_TOKEN_FILE = Path.home() / ".code_puppy" / "msgraph.json"
 
 # Stable Graph identifiers for PHL5 People Dashboard.xlsx
-_DRIVE_ID = "b!_0QBI_JKRE6ehHAn7biSTD0AdXj9cohGsrCpJHG_o6St1whpjN-tQZy9_12-ZK-W"
-_ITEM_ID  = "01QKL2FAAMM2F3JPMFJJAIU35E2F6CXZGU"
+_DRIVE_ID = "b!71cpg6Il4U63YQKRP32zw0zAdDbqNsVNuWqDG6i7osRaZ-_vHxs0SJ6Iip-Avq6v"
+_ITEM_ID  = "01A5L6XWWRFOGZK3T7KNBLIQ4NWNPOQ4MG"
 _GRAPH_ITEM_URL = (
     f"https://graph.microsoft.com/v1.0/drives/{_DRIVE_ID}/items/{_ITEM_ID}"
 )
