@@ -65,7 +65,7 @@ def load_data(force: bool = False) -> list[CBLRecord]:
 
     records: list[CBLRecord] = []
     wb = get_workbook()
-    ws = wb["Ulearns"]
+    ws = wb["ULearns"]
 
     header_found = False
     for row in ws.iter_rows(values_only=True):
