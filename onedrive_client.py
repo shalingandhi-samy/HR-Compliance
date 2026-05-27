@@ -36,7 +36,7 @@ _GRAPH_ITEM_URL = (
 _CLIENT_ID = "de8bc8b5-d9f9-48b1-a8ad-b748da725064"
 _TENANT_ID = "3cbcc3d3-094d-4006-9849-0d11d61f484d"
 _TOKEN_URL = f"https://login.microsoftonline.com/{_TENANT_ID}/oauth2/v2.0/token"
-_SCOPES    = "https://graph.microsoft.com/.default offline_access"
+_SCOPES    = "Files.ReadWrite.All Sites.ReadWrite.All offline_access"
 
 PROXIES = {
     "http": "http://sysproxy.wal-mart.com:8080",
