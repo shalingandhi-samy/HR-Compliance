@@ -46,13 +46,44 @@ _file_bytes: Optional[bytes] = None
 # Token helpers
 # ---------------------------------------------------------------------------
 
+def _newest_msal_graph_token(data: dict) -> Optional[tuple[str, str]]:
+    """Pull the freshest Graph access token out of the newer MSAL cache format.
+
+    Code Puppy's built-in msgraph auth now stores tokens under an
+    ``AccessToken`` dict keyed by cache-key strings, rather than the old
+    top-level ``access_token`` field. Each entry has a ``target`` (scopes)
+    and ``secret`` (the JWT) plus a ``cached_at`` unix timestamp. We want
+    the most recently cached entry whose scopes are for graph.microsoft.com.
+    """
+    entries = data.get("AccessToken")
+    if not isinstance(entries, dict) or not entries:
+        return None
+    best_secret, best_cached_at = None, -1
+    for entry in entries.values():
+        target = entry.get("target", "")
+        if "graph.microsoft.com" not in target:
+            continue
+        cached_at = int(entry.get("cached_at", 0))
+        if cached_at > best_cached_at:
+            best_cached_at = cached_at
+            best_secret = entry.get("secret")
+    if not best_secret:
+        return None
+    issued = datetime.fromtimestamp(best_cached_at).isoformat()
+    return best_secret, issued
+
+
 def _get_graph_token() -> str:
     """Return the current access token from Code Puppy's msgraph.json.
 
     Token refresh is handled exclusively by Code Puppy — this function
-    simply reads what's there. If the token is expired, the Graph API
-    call will return 401 and we fall back to the local Excel file.
-    To refresh, just chat with Code Puppy (any msgraph command works).
+    simply reads what's there. Prefers the newer MSAL cache format
+    (``AccessToken`` dict) since that's what Code Puppy's msgraph
+    subagent actively refreshes; falls back to the legacy top-level
+    ``access_token`` field for backward compat. If the token is expired,
+    the Graph API call will return 401 and we fall back to the local
+    Excel file. To refresh, just chat with Code Puppy (any msgraph
+    command works).
     """
     if not MSGRAPH_TOKEN_FILE.exists():
         raise RuntimeError(
@@ -60,10 +91,17 @@ def _get_graph_token() -> str:
             "Chat with Code Puppy and run any msgraph command to authenticate."
         )
     data = json.loads(MSGRAPH_TOKEN_FILE.read_text(encoding="utf-8"))
+
+    msal_token = _newest_msal_graph_token(data)
+    if msal_token:
+        token, issued = msal_token
+        logger.info(f"Using token from msgraph.json MSAL cache (issued {issued})")
+        return token
+
     token = data.get("access_token", "")
     if not token:
         raise RuntimeError("access_token missing in msgraph.json — chat with Code Puppy to re-auth.")
-    logger.info(f"Using token from msgraph.json (issued {data.get('timestamp', 'unknown')})")
+    logger.info(f"Using legacy top-level token from msgraph.json (issued {data.get('timestamp', 'unknown')})")
     return token
 
 

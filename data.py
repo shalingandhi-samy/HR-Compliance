@@ -1,6 +1,7 @@
 """Data loading and processing for PHL5 Compliance Dashboard."""
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Optional
@@ -37,16 +38,25 @@ _cache: list[CBLRecord] = []
 _loaded_at: Optional[datetime] = None
 
 
-def _parse_shift(raw: Optional[str]) -> str:
-    if not raw:
+# Job Description (column D) values end in a shift code like
+# 'WAREHOUSE WORKER_S5' -- the last 2 characters are the shift (S1-S7).
+SHIFT_CODE_RE = re.compile(r"(S[1-7])\s*$", re.IGNORECASE)
+
+
+def _parse_shift(job_description: Optional[str]) -> str:
+    """Extract the shift code from the tail of the Job Description string.
+
+    Source changed (Sept 2026): shift used to come from the Position column
+    (M / row[12], e.g. '4 - Weekend (United States of America)'). It now
+    comes from Job Description (D / row[3]) instead -- last 2 characters
+    are the shift code, e.g. 'WAREHOUSE WORKER_S5' -> 'S5'.
+    """
+    if not job_description:
         return "Unknown"
-    # Extract short shift label e.g. "4 - Weekend (United States of America)" -> "Shift 4 - Weekend"
-    parts = str(raw).split(" - ", 1)
-    if len(parts) == 2:
-        num = parts[0].strip()
-        name = parts[1].split(" (")[0].strip()
-        return f"Shift {num} - {name}"
-    return str(raw)
+    m = SHIFT_CODE_RE.search(str(job_description).strip())
+    if m:
+        return m.group(1).upper()
+    return "Unknown"
 
 
 def _determine_status(row_values: tuple) -> Optional[str]:
@@ -83,7 +93,7 @@ def load_data(force: bool = False) -> list[CBLRecord]:
             continue  # skip rows with no status flag
 
         manager = str(row[11]).strip() if row[11] else "No Manager"
-        shift = _parse_shift(row[12])
+        shift = _parse_shift(row[3])
 
         records.append(CBLRecord(
             associate=str(row[0]).strip(),

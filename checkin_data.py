@@ -35,12 +35,14 @@ def load_checkins(force: bool = False) -> list[CheckInRecord]:
     wb = get_workbook()
     ws = wb["Manager Check-Ins"]
 
-    # First two rows are title/sub-header — skip them
+    # Header row: Associate, Manager, Date Hired, Check-Ins Needed,
+    # FORMULA Do Not Modify (status), WIN, SHIFT
+    # First rows before it are title/sub-header — skip them.
     data_started = False
     for row in ws.iter_rows(values_only=True):
         if not data_started:
-            # Header row has 'Associates' in col 0
-            if row[0] == "Associates":
+            # Header row has 'Associate' (singular!) in col 0 -- not 'Associates'.
+            if row[0] == "Associate":
                 data_started = True
             continue
 
@@ -48,7 +50,7 @@ def load_checkins(force: bool = False) -> list[CheckInRecord]:
             continue
 
         try:
-            checkins = int(row[2]) if row[2] is not None else 0
+            checkins = int(row[3]) if row[3] is not None else 0
         except (ValueError, TypeError):
             checkins = 0
 
@@ -56,7 +58,7 @@ def load_checkins(force: bool = False) -> list[CheckInRecord]:
             associate=str(row[0]).strip(),
             manager=str(row[1]).strip() if row[1] else "No Manager",
             checkins_needed=checkins,
-            status=str(row[3]).strip() if row[3] else "LATE",
+            status=str(row[4]).strip() if row[4] else "LATE",
         ))
 
     wb.close()

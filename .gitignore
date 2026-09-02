@@ -9,3 +9,9 @@ __pycache__/
 .env
 server.log
 *.log
+
+# Generated report HTML at repo root can contain real associate PII
+# (names, WINs, managers) -- never commit these. templates/*.html are
+# Jinja source templates (no data baked in) and stay tracked.
+/*.html
+*_out.txt
