@@ -3,20 +3,12 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import date, datetime, timedelta
 from typing import Optional
 
 import openpyxl
 
 from onedrive_client import get_workbook
-
-STATUS_COLS = {
-    "Overdue": 6,
-    "7 Days": 7,
-    "14 Days": 8,
-    "30 Days": 9,
-    "60 Days": 10,
-}
 
 STATUS_ORDER = ["Overdue", "7 Days", "14 Days", "30 Days", "60 Days"]
 
@@ -59,12 +51,36 @@ def _parse_shift(job_description: Optional[str]) -> str:
     return "Unknown"
 
 
-def _determine_status(row_values: tuple) -> Optional[str]:
-    for status, col_idx in STATUS_COLS.items():
-        val = row_values[col_idx]
-        if val is not None and str(val).strip().lower() in ("x", "yes", "true", "1"):
-            return status
-    return None
+def _status_from_due_date(due_date: Optional[datetime], today: Optional[date] = None) -> Optional[str]:
+    """Compute the TRUE current status bucket from the due date, not from
+    the source sheet's Late/7/14/30/60 Days flag columns.
+
+    Why: the source sheet logs the same training requirement once per
+    historical data pull, and never prunes old snapshot rows. As the due
+    date approaches, each new pull gets a fresh row with the countdown
+    bucket shifted closer (60 -> 30 -> 14 -> 7 -> Late), but the OLD rows
+    stick around too. Trusting each row's flag independently means the
+    same person's same course gets counted once per historical snapshot
+    instead of once. Recomputing fresh from the due date (deduped by
+    associate+WIN+item+due date beforehand) gives the true current count.
+    Boundaries mirror the source sheet's own non-overlapping windows.
+    """
+    if not isinstance(due_date, datetime):
+        return None
+    if today is None:
+        today = date.today()
+    due = due_date.date()
+    if due < today:
+        return "Overdue"
+    if due <= today + timedelta(days=7):
+        return "7 Days"
+    if due <= today + timedelta(days=14):
+        return "14 Days"
+    if due <= today + timedelta(days=30):
+        return "30 Days"
+    if due <= today + timedelta(days=60):
+        return "60 Days"
+    return None  # beyond the tracked horizon
 
 
 def load_data(force: bool = False) -> list[CBLRecord]:
@@ -73,24 +89,36 @@ def load_data(force: bool = False) -> list[CBLRecord]:
     if _cache and not force:
         return _cache
 
-    records: list[CBLRecord] = []
     wb = get_workbook()
     ws = wb["ULearns"]
 
+    # Dedupe by the true identity of a training requirement -- the source
+    # sheet logs the same (associate, course, due date) once per historical
+    # pull, so raw rows massively overcount distinct pending items (in
+    # practice: ~1,798 raw rows vs ~945 distinct requirements). Keep the
+    # first row seen per key; due date math (not the row's flag columns)
+    # determines status once, after dedup.
+    seen: dict[tuple, tuple] = {}
     header_found = False
     for row in ws.iter_rows(values_only=True):
-        # Find the actual data header row
         if not header_found:
             if row[0] == "Associate":
                 header_found = True
             continue
-
         if not row[0]:  # skip empty rows
             continue
+        due_date = row[5] if isinstance(row[5], datetime) else None
+        key = (row[0], row[1], row[4], due_date)
+        if key not in seen:
+            seen[key] = row
 
-        status = _determine_status(row)
+    records: list[CBLRecord] = []
+    today = date.today()
+    for row in seen.values():
+        due_date = row[5] if isinstance(row[5], datetime) else None
+        status = _status_from_due_date(due_date, today)
         if status is None:
-            continue  # skip rows with no status flag
+            continue  # no due date, or beyond the tracked horizon
 
         manager = str(row[11]).strip() if row[11] else "No Manager"
         shift = _parse_shift(row[3])
@@ -101,7 +129,7 @@ def load_data(force: bool = False) -> list[CBLRecord]:
             user_id=str(row[2]).strip() if row[2] else "",
             job_description=str(row[3]).strip() if row[3] else "",
             item_name=str(row[4]).strip() if row[4] else "",
-            due_date=row[5] if isinstance(row[5], datetime) else None,
+            due_date=due_date,
             status=status,
             manager=manager,
             shift=shift,
