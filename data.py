@@ -119,10 +119,18 @@ def get_summary(records: list[CBLRecord]) -> dict:
 
     # Per manager per status
     manager_stats: dict[str, dict[str, int]] = {}
+    manager_shift_sets: dict[str, set[str]] = {}
     for r in records:
         if r.manager not in manager_stats:
             manager_stats[r.manager] = {s: 0 for s in STATUS_ORDER}
         manager_stats[r.manager][r.status] += 1
+        manager_shift_sets.setdefault(r.manager, set()).add(r.shift)
+
+    # Shift(s) each manager's associates are on -- usually one, but a
+    # manager can span multiple if their team mixes shifts.
+    manager_shifts = {
+        m: sorted(shifts) for m, shifts in manager_shift_sets.items()
+    }
 
     # Per shift per status
     shift_stats: dict[str, dict[str, int]] = {}
@@ -144,6 +152,7 @@ def get_summary(records: list[CBLRecord]) -> dict:
         "total": total,
         "manager_stats": manager_stats,
         "manager_totals": manager_totals,
+        "manager_shifts": manager_shifts,
         "sorted_managers": sorted_managers,
         "shift_stats": shift_stats,
         "sorted_shifts": sorted_shifts,
