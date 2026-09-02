@@ -15,3 +15,6 @@ server.log
 # Jinja source templates (no data baked in) and stay tracked.
 /*.html
 *_out.txt
+
+# Live MS Graph refresh token -- never commit credentials
+.graph_token_cache.json

@@ -1,10 +1,15 @@
 """Excel file loader — reads PHL5 People Dashboard from SharePoint via MS Graph.
 
 Token management:
-- Reads access_token from ~/.code_puppy/msgraph.json (written by Code Puppy).
-- Does NOT attempt DIY token refresh — Code Puppy manages token lifecycle.
-  If the token is expired, just chat with Code Puppy to re-authenticate.
-- Falls back to the local phl5_compliance.xlsx if Graph is unreachable.
+- Fully self-sufficient. Bootstraps a refresh_token once from Code Puppy's
+  ~/.code_puppy/msgraph.json (MSAL cache), then owns its own token lifecycle
+  from there on via the OAuth refresh_token grant -- no Code Puppy needed
+  for routine operation. Own state persists in .graph_token_cache.json
+  (gitignored) so it survives process restarts.
+- Falls back to the local phl5_compliance.xlsx if Graph is unreachable and
+  no usable refresh token exists anywhere (e.g. it's finally expired/revoked
+  after long inactivity -- rare, but if it happens, chat with Code Puppy to
+  re-bootstrap via msgraph).
 
 SharePoint source: teams.wal-mart.com/sites/7381HRClerk
 File: PHL5 People Dashboard.xlsx
@@ -14,7 +19,7 @@ from __future__ import annotations
 import io
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional
 
@@ -24,6 +29,7 @@ logger = logging.getLogger(__name__)
 
 LOCAL_FILE_PATH = Path(__file__).parent / "phl5_compliance.xlsx"
 MSGRAPH_TOKEN_FILE = Path.home() / ".code_puppy" / "msgraph.json"
+OWN_TOKEN_CACHE_FILE = Path(__file__).parent / ".graph_token_cache.json"
 
 # SharePoint: 7381HRClerk — Shared Documents/PHL5 People Dashboard.xlsx
 _DRIVE_ID = "b!71cpg6Il4U63YQKRP32zw0zAdDbqNsVNuWqDG6i7osRaZ-_vHxs0SJ6Iip-Avq6v"
@@ -32,7 +38,11 @@ _GRAPH_ITEM_URL = (
     f"https://graph.microsoft.com/v1.0/drives/{_DRIVE_ID}/items/{_ITEM_ID}"
 )
 
-# Token is managed by Code Puppy — do not attempt independent refresh.
+# Same Azure AD app + tenant Code Puppy's own msgraph tooling uses. We
+# bootstrap a refresh_token from its cache once, then own renewal ourselves.
+_TENANT_ID = "3cbcc3d3-094d-4006-9849-0d11d61f484d"
+_CLIENT_ID = "c9516dcf-d06d-487a-b6c0-6c44e3b52a26"
+_TOKEN_URL = f"https://login.microsoftonline.com/{_TENANT_ID}/oauth2/v2.0/token"
 
 PROXIES = {
     "http": "http://sysproxy.wal-mart.com:8080",
@@ -41,68 +51,137 @@ PROXIES = {
 
 _file_bytes: Optional[bytes] = None
 
+# In-memory cache so we don't hit disk/network on every single call within
+# the same refresh window.
+_mem_access_token: Optional[str] = None
+_mem_expires_at: Optional[datetime] = None
+
 
 # ---------------------------------------------------------------------------
 # Token helpers
 # ---------------------------------------------------------------------------
 
-def _newest_msal_graph_token(data: dict) -> Optional[tuple[str, str]]:
-    """Pull the freshest Graph access token out of the newer MSAL cache format.
+def _newest_msal_refresh_token(data: dict) -> Optional[str]:
+    """Find the refresh_token matching our client_id in Code Puppy's MSAL cache.
 
-    Code Puppy's built-in msgraph auth now stores tokens under an
-    ``AccessToken`` dict keyed by cache-key strings, rather than the old
-    top-level ``access_token`` field. Each entry has a ``target`` (scopes)
-    and ``secret`` (the JWT) plus a ``cached_at`` unix timestamp. We want
-    the most recently cached entry whose scopes are for graph.microsoft.com.
+    Used only as a one-time bootstrap seed the first time this app runs (or
+    if our own persisted cache is ever wiped). After that, we mint our own
+    refresh tokens and never need to touch msgraph.json again.
     """
-    entries = data.get("AccessToken")
-    if not isinstance(entries, dict) or not entries:
+    for entry in data.get("RefreshToken", {}).values():
+        if entry.get("client_id") == _CLIENT_ID:
+            return entry.get("secret")
+    return None
+
+
+def _load_own_cache() -> Optional[dict]:
+    if not OWN_TOKEN_CACHE_FILE.exists():
         return None
-    best_secret, best_cached_at = None, -1
-    for entry in entries.values():
-        target = entry.get("target", "")
-        if "graph.microsoft.com" not in target:
-            continue
-        cached_at = int(entry.get("cached_at", 0))
-        if cached_at > best_cached_at:
-            best_cached_at = cached_at
-            best_secret = entry.get("secret")
-    if not best_secret:
+    try:
+        return json.loads(OWN_TOKEN_CACHE_FILE.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
         return None
-    issued = datetime.fromtimestamp(best_cached_at).isoformat()
-    return best_secret, issued
+
+
+def _save_own_cache(access_token: str, refresh_token: str, expires_at: datetime) -> None:
+    OWN_TOKEN_CACHE_FILE.write_text(
+        json.dumps({
+            "access_token": access_token,
+            "refresh_token": refresh_token,
+            "expires_at": expires_at.isoformat(),
+        }),
+        encoding="utf-8",
+    )
+
+
+def _get_bootstrap_refresh_token() -> str:
+    """Get a refresh_token to start from: our own cache, else Code Puppy's."""
+    own = _load_own_cache()
+    if own and own.get("refresh_token"):
+        return own["refresh_token"]
+
+    if not MSGRAPH_TOKEN_FILE.exists():
+        raise RuntimeError(
+            f"No refresh token available anywhere (checked {OWN_TOKEN_CACHE_FILE} "
+            f"and {MSGRAPH_TOKEN_FILE}). Chat with Code Puppy and run any msgraph "
+            "command once to bootstrap authentication."
+        )
+    data = json.loads(MSGRAPH_TOKEN_FILE.read_text(encoding="utf-8"))
+    refresh_token = _newest_msal_refresh_token(data)
+    if not refresh_token:
+        raise RuntimeError(
+            "No usable refresh_token found in msgraph.json. Chat with Code "
+            "Puppy and run any msgraph command once to bootstrap authentication."
+        )
+    logger.info("Bootstrapped refresh token from Code Puppy's msgraph.json cache.")
+    return refresh_token
+
+
+def _refresh_access_token() -> tuple[str, datetime]:
+    """Mint a fresh access token via the OAuth refresh_token grant.
+
+    Fully self-contained -- no Code Puppy involvement needed. Azure AD
+    typically rotates the refresh_token on each use, so we always persist
+    whatever comes back (falling back to the old one if none was issued).
+    """
+    import requests
+    refresh_token = _get_bootstrap_refresh_token()
+    resp = requests.post(
+        _TOKEN_URL,
+        data={
+            "client_id": _CLIENT_ID,
+            "grant_type": "refresh_token",
+            "refresh_token": refresh_token,
+        },
+        proxies=PROXIES,
+        timeout=15,
+    )
+    if resp.status_code != 200:
+        raise RuntimeError(
+            f"Refresh token grant failed ({resp.status_code}): {resp.text[:300]}\n"
+            "The refresh token may finally be expired/revoked. Chat with Code "
+            "Puppy and run any msgraph command once to re-bootstrap."
+        )
+    payload = resp.json()
+    access_token = payload["access_token"]
+    new_refresh_token = payload.get("refresh_token", refresh_token)
+    expires_at = datetime.now() + timedelta(seconds=int(payload.get("expires_in", 3600)))
+    _save_own_cache(access_token, new_refresh_token, expires_at)
+    logger.info(f"Refreshed Graph access token via refresh_token grant (valid until {expires_at.isoformat()}).")
+    return access_token, expires_at
 
 
 def _get_graph_token() -> str:
-    """Return the current access token from Code Puppy's msgraph.json.
+    """Return a valid Graph access token, refreshing automatically as needed.
 
-    Token refresh is handled exclusively by Code Puppy — this function
-    simply reads what's there. Prefers the newer MSAL cache format
-    (``AccessToken`` dict) since that's what Code Puppy's msgraph
-    subagent actively refreshes; falls back to the legacy top-level
-    ``access_token`` field for backward compat. If the token is expired,
-    the Graph API call will return 401 and we fall back to the local
-    Excel file. To refresh, just chat with Code Puppy (any msgraph
-    command works).
+    Fully self-sufficient: checks in-memory cache first, then the persisted
+    own-cache file, and only calls the refresh_token grant when the current
+    token is missing or within 5 minutes of expiry. No Code Puppy round trip
+    required for routine operation.
     """
-    if not MSGRAPH_TOKEN_FILE.exists():
-        raise RuntimeError(
-            f"MS Graph token not found at {MSGRAPH_TOKEN_FILE}.\n"
-            "Chat with Code Puppy and run any msgraph command to authenticate."
-        )
-    data = json.loads(MSGRAPH_TOKEN_FILE.read_text(encoding="utf-8"))
+    global _mem_access_token, _mem_expires_at
 
-    msal_token = _newest_msal_graph_token(data)
-    if msal_token:
-        token, issued = msal_token
-        logger.info(f"Using token from msgraph.json MSAL cache (issued {issued})")
-        return token
+    buffer = timedelta(minutes=5)
+    now = datetime.now()
 
-    token = data.get("access_token", "")
-    if not token:
-        raise RuntimeError("access_token missing in msgraph.json — chat with Code Puppy to re-auth.")
-    logger.info(f"Using legacy top-level token from msgraph.json (issued {data.get('timestamp', 'unknown')})")
-    return token
+    if _mem_access_token and _mem_expires_at and now < _mem_expires_at - buffer:
+        return _mem_access_token
+
+    own = _load_own_cache()
+    if own:
+        try:
+            expires_at = datetime.fromisoformat(own["expires_at"])
+            if now < expires_at - buffer:
+                _mem_access_token = own["access_token"]
+                _mem_expires_at = expires_at
+                return _mem_access_token
+        except (KeyError, ValueError):
+            pass
+
+    access_token, expires_at = _refresh_access_token()
+    _mem_access_token = access_token
+    _mem_expires_at = expires_at
+    return access_token
 
 
 # ---------------------------------------------------------------------------
