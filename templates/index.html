@@ -58,7 +58,6 @@
       <thead class="bg-[#0053e2] text-white">
         <tr>
           <th class="px-4 py-3 text-left font-semibold">Manager</th>
-          <th class="px-4 py-3 text-center font-semibold">Shift</th>
           <th class="px-4 py-3 text-center font-semibold">Total</th>
           {% for s in status_order %}
           <th class="px-4 py-3 text-center font-semibold">{{ s }}</th>
@@ -74,7 +73,6 @@
           <td class="px-4 py-3 font-medium text-[#0053e2] group-hover:underline">
             {{ manager }}
           </td>
-          <td class="px-4 py-3 text-center text-gray-500">{{ summary.manager_shifts[manager] | join(', ') }}</td>
           <td class="px-4 py-3 text-center font-bold text-gray-700">{{ total_m }}</td>
           {% for s in status_order %}
           {% set cnt = stats[s] %}
