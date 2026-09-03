@@ -66,23 +66,21 @@
     <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
       <div class="flex items-center gap-4">
         <a href="/" class="text-white/80 hover:text-white text-xl transition">&#127968;</a>
+        <span class="text-white font-bold text-lg tracking-wide">PHL5 COMPLIANCE DASHBOARD</span>
       </div>
-      <span class="fixed top-3 left-4 z-50 text-white font-bold text-lg tracking-wide no-print">PHL5 COMPLIANCE DASHBOARD</span>
+      <div class="flex items-center gap-3">
+        <span class="text-white/80 text-xs"
+          hx-get="/api/last-refreshed"
+          hx-trigger="load, every 60s"
+          hx-swap="innerHTML">
+          &#128260; Loading...
+        </span>
+        <button id="dark-toggle" onclick="toggleDark()"
+          class="text-2xl leading-none hover:scale-110 transition-transform"
+          title="Toggle dark mode">&#127769;</button>
+      </div>
     </div>
   </nav>
-
-  <!-- Fixed top-right: last refreshed + dark mode toggle -->
-  <div class="no-print fixed top-3 right-4 z-50 flex items-center gap-3">
-    <span class="text-white/80 text-xs"
-      hx-get="/api/last-refreshed"
-      hx-trigger="load, every 60s"
-      hx-swap="innerHTML">
-      &#128260; Loading...
-    </span>
-    <button id="dark-toggle" onclick="toggleDark()"
-      class="text-2xl leading-none hover:scale-110 transition-transform"
-      title="Toggle dark mode">🌙</button>
-  </div>
 
   <div class="tab-nav bg-[#041f41] border-b border-white/10 overflow-x-auto">
     <div class="flex gap-1 whitespace-nowrap justify-center">
@@ -139,14 +137,14 @@ function toggleDark() {
   var html = document.getElementById('html-root');
   var isDark = html.classList.toggle('dark');
   localStorage.setItem('darkMode', isDark ? '1' : '0');
-  document.getElementById('dark-toggle').textContent = isDark ? '☀️' : '🌙';
+  document.getElementById('dark-toggle').textContent = isDark ? String.fromCodePoint(0x2600, 0xFE0F) : String.fromCodePoint(0x1F319);
 }
 (function () {
   if (localStorage.getItem('darkMode') === '1') {
     document.getElementById('html-root').classList.add('dark');
     document.addEventListener('DOMContentLoaded', function () {
       var btn = document.getElementById('dark-toggle');
-      if (btn) btn.textContent = '☀️';
+      if (btn) btn.textContent = String.fromCodePoint(0x2600, 0xFE0F);
     });
   }
 })();
