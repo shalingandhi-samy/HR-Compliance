@@ -127,9 +127,10 @@ async def startup_event():
     start_file_watcher(scheduled_refresh)
 
 # Auto-refresh at 8:30 AM and 8:30 PM every day
+# misfire_grace_time=3600 means: if the job fires up to 1hr late, still run it
 scheduler = BackgroundScheduler()
-scheduler.add_job(scheduled_refresh, CronTrigger(hour=8, minute=30))
-scheduler.add_job(scheduled_refresh, CronTrigger(hour=20, minute=30))
+scheduler.add_job(scheduled_refresh, CronTrigger(hour=8, minute=30), misfire_grace_time=3600)
+scheduler.add_job(scheduled_refresh, CronTrigger(hour=20, minute=30), misfire_grace_time=3600)
 scheduler.start()
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")

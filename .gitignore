@@ -18,3 +18,13 @@ server.log
 
 # Live MS Graph refresh token -- never commit credentials
 .graph_token_cache.json
+
+# One-off debug/dump scratch scripts from ad-hoc data investigations --
+# often contain hardcoded real associate names copy-pasted for debugging.
+debug_*.py
+dump_*.py
+_cwd_test.txt
+all_excel_names.txt
+all_sheets_names.txt
+live_names_debug.txt
+pts_dump.txt

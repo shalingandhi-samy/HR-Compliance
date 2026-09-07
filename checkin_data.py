@@ -8,6 +8,7 @@ from typing import Optional
 import openpyxl
 
 from onedrive_client import get_workbook
+from sheet_utils import col, find_header_row
 
 # Number of check-ins needed breakdown
 CHECKIN_BUCKETS = [1, 2, 3, 4]
@@ -34,34 +35,37 @@ def load_checkins(force: bool = False) -> list[CheckInRecord]:
     records: list[CheckInRecord] = []
     wb = get_workbook()
     ws = wb["Manager Check-Ins"]
+    rows = list(ws.iter_rows(values_only=True))
+    wb.close()
 
     # Header row: Associate, Manager, Date Hired, Check-Ins Needed,
-    # FORMULA Do Not Modify (status), WIN, SHIFT
-    # First rows before it are title/sub-header — skip them.
-    data_started = False
-    for row in ws.iter_rows(values_only=True):
-        if not data_started:
-            # Header row has 'Associate' (singular!) in col 0 -- not 'Associates'.
-            if row[0] == "Associate":
-                data_started = True
-            continue
+    # FORMULA Do Not Modify (status), WIN, SHIFT -- located by name so a
+    # future rename/reorder (like the 'Associates'->'Associate' rename and
+    # 'Date Hired' insertion that broke this before) fails loudly instead
+    # of silently returning 0.
+    header_idx, hmap = find_header_row(rows, ["Associate", "Associates"])
+    c_associate = col(hmap, "Associate", "Associates")
+    c_manager = col(hmap, "Manager")
+    c_checkins = col(hmap, "Check-Ins Needed", "Checkins Needed")
+    c_status = col(hmap, "FORMULA Do Not Modify", required=False)
 
-        if not row[0]:  # skip empty rows
+    for row in rows[header_idx + 1:]:
+        if not row[c_associate]:  # skip empty rows
             continue
 
         try:
-            checkins = int(row[3]) if row[3] is not None else 0
+            checkins = int(row[c_checkins]) if row[c_checkins] is not None else 0
         except (ValueError, TypeError):
             checkins = 0
 
+        status_val = row[c_status] if c_status is not None else None
         records.append(CheckInRecord(
-            associate=str(row[0]).strip(),
-            manager=str(row[1]).strip() if row[1] else "No Manager",
+            associate=str(row[c_associate]).strip(),
+            manager=str(row[c_manager]).strip() if row[c_manager] else "No Manager",
             checkins_needed=checkins,
-            status=str(row[4]).strip() if row[4] else "LATE",
+            status=str(status_val).strip() if status_val else "LATE",
         ))
 
-    wb.close()
     _cache = records
     _loaded_at = datetime.now()
     return records

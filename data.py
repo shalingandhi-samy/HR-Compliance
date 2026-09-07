@@ -9,6 +9,7 @@ from typing import Optional
 import openpyxl
 
 from onedrive_client import get_workbook
+from sheet_utils import col, find_header_row
 
 STATUS_ORDER = ["Overdue", "7 Days", "14 Days", "30 Days", "60 Days"]
 
@@ -91,6 +92,17 @@ def load_data(force: bool = False) -> list[CBLRecord]:
 
     wb = get_workbook()
     ws = wb["ULearns"]
+    rows = list(ws.iter_rows(values_only=True))
+    wb.close()
+
+    header_idx, hmap = find_header_row(rows, ["Associate", "Associates"])
+    c_associate = col(hmap, "Associate", "Associates")
+    c_win = col(hmap, "WIN")
+    c_user_id = col(hmap, "User ID")
+    c_job_description = col(hmap, "Job Description")
+    c_item_name = col(hmap, "Item Name")
+    c_due_date = col(hmap, "Due Date")
+    c_manager = col(hmap, "Manager")
 
     # Dedupe by the true identity of a training requirement -- the source
     # sheet logs the same (associate, course, due date) once per historical
@@ -99,43 +111,37 @@ def load_data(force: bool = False) -> list[CBLRecord]:
     # first row seen per key; due date math (not the row's flag columns)
     # determines status once, after dedup.
     seen: dict[tuple, tuple] = {}
-    header_found = False
-    for row in ws.iter_rows(values_only=True):
-        if not header_found:
-            if row[0] == "Associate":
-                header_found = True
+    for row in rows[header_idx + 1:]:
+        if not row[c_associate]:  # skip empty rows
             continue
-        if not row[0]:  # skip empty rows
-            continue
-        due_date = row[5] if isinstance(row[5], datetime) else None
-        key = (row[0], row[1], row[4], due_date)
+        due_date = row[c_due_date] if isinstance(row[c_due_date], datetime) else None
+        key = (row[c_associate], row[c_win], row[c_item_name], due_date)
         if key not in seen:
             seen[key] = row
 
     records: list[CBLRecord] = []
     today = date.today()
     for row in seen.values():
-        due_date = row[5] if isinstance(row[5], datetime) else None
+        due_date = row[c_due_date] if isinstance(row[c_due_date], datetime) else None
         status = _status_from_due_date(due_date, today)
         if status is None:
             continue  # no due date, or beyond the tracked horizon
 
-        manager = str(row[11]).strip() if row[11] else "No Manager"
-        shift = _parse_shift(row[3])
+        manager = str(row[c_manager]).strip() if row[c_manager] else "No Manager"
+        shift = _parse_shift(row[c_job_description])
 
         records.append(CBLRecord(
-            associate=str(row[0]).strip(),
-            win=row[1],
-            user_id=str(row[2]).strip() if row[2] else "",
-            job_description=str(row[3]).strip() if row[3] else "",
-            item_name=str(row[4]).strip() if row[4] else "",
+            associate=str(row[c_associate]).strip(),
+            win=row[c_win],
+            user_id=str(row[c_user_id]).strip() if row[c_user_id] else "",
+            job_description=str(row[c_job_description]).strip() if row[c_job_description] else "",
+            item_name=str(row[c_item_name]).strip() if row[c_item_name] else "",
             due_date=due_date,
             status=status,
             manager=manager,
             shift=shift,
         ))
 
-    wb.close()
     _cache = records
     _loaded_at = datetime.now()
     return records
