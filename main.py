@@ -461,13 +461,16 @@ async def scorecard_manager(request: Request, manager_name: str):
 
 @app.post("/refresh")
 async def refresh_all_data():
-    """Download latest Excel from OneDrive and reload all data caches."""
-    onedrive_client.refresh_file_bytes()
-    load_data(force=True)
-    load_attendance(force=True)
-    load_checkins(force=True)
-    load_points(force=True)
-    load_pto(force=True)
+    """Download latest Excel from OneDrive and reload all data caches.
+
+    Delegates to scheduled_refresh() -- the same function the 8:30am/pm
+    cron job runs -- so a manual refresh also updates _last_refreshed,
+    saves a trend snapshot, and checks alert thresholds. Previously this
+    duplicated just the reload lines and silently skipped all three,
+    which made the UI's "Last refreshed" timestamp look stale even right
+    after a successful manual refresh.
+    """
+    scheduled_refresh()
     return RedirectResponse(url="/", status_code=303)
 
 
