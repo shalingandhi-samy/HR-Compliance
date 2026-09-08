@@ -38,7 +38,7 @@ import onedrive_client
 from file_watcher import start_file_watcher
 from scorecard_data import get_scorecard_summary, get_manager_scorecard
 from associate_lookup import search_associate
-from history_db import init_db, save_snapshot, get_snapshots
+from history_db import init_db, save_snapshot, get_weekly_snapshots
 from notes_db import init_notes_table, get_notes_for_wins, save_note
 from alerts import check_and_send_alerts
 from shifts_data import get_shift_breakdown
@@ -420,11 +420,11 @@ async def lookup(request: Request, q: str = ""):
 
 @app.get("/trends", response_class=HTMLResponse)
 async def trends(request: Request):
-    snapshots = get_snapshots(days=60)
+    weekly = get_weekly_snapshots(weeks=26)
     return templates.TemplateResponse("trends.html", {
         "request": request,
-        "snapshots": snapshots,
-        "snapshots_json": json.dumps(snapshots),
+        "snapshots": weekly,
+        "snapshots_json": json.dumps(weekly),
     })
 
 

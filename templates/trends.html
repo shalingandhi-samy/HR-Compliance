@@ -4,7 +4,7 @@
 
 <div class="mb-8">
   <h1 class="text-3xl font-bold text-[#041f41] mb-1">&#128202; Historical Trends</h1>
-  <p class="text-gray-500 text-sm">Daily compliance snapshots — last 60 days</p>
+  <p class="text-gray-500 text-sm">Week-over-week compliance (Walmart fiscal week: Saturday-Friday) — last {{ snapshots | length }} weeks</p>
 </div>
 
 {% if snapshots | length == 0 %}
@@ -33,7 +33,7 @@
     <div class="text-4xl font-black" style="color:{{ color }};">{{ curr }}</div>
     <div class="text-xs mt-1 {% if delta > 0 %}text-red-500{% elif delta < 0 %}text-green-600{% else %}text-gray-400{% endif %}">
       {% if delta > 0 %}&#9650; +{{ delta }}{% elif delta < 0 %}&#9660; {{ delta }}{% else %}&mdash; No change{% endif %}
-      <span class="text-gray-400"> vs {{ snapshots|length }}d ago</span>
+      <span class="text-gray-400"> vs {{ first.week_label }}</span>
     </div>
   </div>
   {% endfor %}
@@ -41,7 +41,7 @@
 
 <!-- Line Chart -->
 <div class="bg-white rounded-2xl shadow border border-gray-100 p-6 mb-10">
-  <h2 class="text-lg font-bold text-[#041f41] mb-4">All Metrics Over Time</h2>
+  <h2 class="text-lg font-bold text-[#041f41] mb-4">All Metrics — Week over Week</h2>
   <div style="height:380px;">
     <canvas id="trendsChart"></canvas>
   </div>
@@ -52,7 +52,9 @@
   <table class="w-full text-sm sortable-table" id="trends-table">
     <thead class="bg-[#041f41] text-white">
       <tr>
-        <th class="px-4 py-3 text-left font-semibold">Date</th>
+        <th class="px-4 py-3 text-left font-semibold">Fiscal Week</th>
+        <th class="px-4 py-3 text-left font-semibold">Week Of</th>
+        <th class="px-4 py-3 text-left font-semibold">As Of</th>
         <th class="px-4 py-3 text-center font-semibold">&#128218; CBL</th>
         <th class="px-4 py-3 text-center font-semibold">&#128197; Attendance</th>
         <th class="px-4 py-3 text-center font-semibold">&#9989; Check-Ins</th>
@@ -63,7 +65,9 @@
     <tbody class="divide-y divide-gray-100">
       {% for s in snapshots | reverse %}
       <tr class="hover:bg-blue-50 transition">
-        <td class="px-4 py-2 font-medium text-gray-700">{{ s.date }}</td>
+        <td class="px-4 py-2 font-bold text-gray-700">{{ s.week_label }}</td>
+        <td class="px-4 py-2 text-gray-500">{{ s.range_label }}</td>
+        <td class="px-4 py-2 text-gray-400 text-xs">{{ s.as_of }}</td>
         <td class="px-4 py-2 text-center font-bold text-[#0053e2]">{{ s.cbl }}</td>
         <td class="px-4 py-2 text-center font-bold text-[#995213]">{{ s.att }}</td>
         <td class="px-4 py-2 text-center font-bold text-[#ea1100]">{{ s.chk }}</td>
@@ -76,8 +80,12 @@
 </div>
 
 <script>
-var data = {{ snapshots_json }};
-var labels = data.map(function(d) { return d.date; });
+// NOTE: snapshots_json must render with the `safe` filter -- without it,
+// Jinja2 autoescapes the JSON's double quotes into &#34; entities, which
+// produces invalid JavaScript here and silently kills this entire script
+// block (including the Chart() call below) with a syntax error.
+var data = {{ snapshots_json | safe }};
+var labels = data.map(function(d) { return d.week_label + ' (' + d.range_label + ')'; });
 
 new Chart(document.getElementById('trendsChart'), {
   type: 'line',
