@@ -420,7 +420,7 @@ async def lookup(request: Request, q: str = ""):
 
 @app.get("/trends", response_class=HTMLResponse)
 async def trends(request: Request):
-    weekly = get_weekly_snapshots(weeks=26)
+    weekly = get_weekly_snapshots(weeks=4)
     return templates.TemplateResponse("trends.html", {
         "request": request,
         "snapshots": weekly,
