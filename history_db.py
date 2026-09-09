@@ -87,10 +87,9 @@ def get_weekly_snapshots(weeks: int = 26) -> list[dict]:
         ws = fiscal_calendar.week_start(snap_date)
         # Rows are processed oldest->newest, so the last write per bucket
         # naturally ends up holding that week's latest snapshot.
-        fy, wk = fiscal_calendar.fiscal_week(snap_date)
         buckets[ws] = {
             "week_start": ws.isoformat(),
-            "week_label": f"FY{fy % 100} Wk{wk}",
+            "week_label": fiscal_calendar.week_label(snap_date),
             "range_label": fiscal_calendar.week_range_label(ws),
             "as_of": r[0],
             "cbl": r[1], "att": r[2], "chk": r[3], "pts": r[4], "pto": r[5],

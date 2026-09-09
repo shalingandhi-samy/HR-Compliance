@@ -80,7 +80,17 @@ def scheduled_refresh():
 
 
 def _save_snapshot_now() -> None:
-    """Pull current totals from cached data and persist a snapshot."""
+    """Pull current totals from cached data and persist a snapshot.
+
+    Only actually saves on Fridays -- Walmart's retail week runs
+    Saturday-Friday, so Friday's numbers are that week's final tally.
+    This keeps history.db to one clean data point per week and avoids a
+    new week's row filling up with partial, still-in-progress mid-week
+    counts from whatever random day someone happened to hit refresh.
+    """
+    if datetime.now().weekday() != 4:  # Monday=0 ... Friday=4
+        logger.info("Skipping trend snapshot -- only saved on Fridays (week close).")
+        return
     try:
         cbl = load_data()
         att = load_attendance()

@@ -41,9 +41,9 @@ def fiscal_week(d: date) -> tuple[int, int]:
 
 
 def week_label(d: date) -> str:
-    """Human label like 'FY26 Wk32'."""
-    fy, wk = fiscal_week(d)
-    return f"FY{fy % 100} Wk{wk}"
+    """Human label like 'Week 32' -- matches how the business actually says it."""
+    _, wk = fiscal_week(d)
+    return f"Week {wk}"
 
 
 def week_range_label(ws: date) -> str:
